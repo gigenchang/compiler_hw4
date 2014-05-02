@@ -110,28 +110,39 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 
 void processProgramNode(AST_NODE *programNode)
 {
+	//走過一遍所有的children
+	processDeclarationNode(programNode->child);
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
 {
+	//處理四種不同的type declration
+	//VARIABLE_DECL  TYPE_DECL   FUNCTION_DECL  FUNCTION_PARAMETER_DECL
 }
 
 
 void processTypeNode(AST_NODE* idNodeAsType)
 {
+	//**給ID Node
+	//**可能是NORMAL_ID/ARRAY_ID/WITH_INIT_ID
 }
 
 
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
 {
+	//底層，接下來要插入Entry了
 }
 
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 {
+	//if assign ...call blabalbal(call checkAssignmentStmt)
+	//if rela ... cla blablabla(call processExprRelatedNode)
+	//call processExprNode
 }
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
+	
 }
 
 
@@ -201,11 +212,18 @@ void checkReturnStmt(AST_NODE* returnNode)
 
 void processBlockNode(AST_NODE* blockNode)
 {
+	//處理
+	//可能有decl_list node 和 stmt_list node
+	//stmt_list_node
+	//發現底下有stmt_list node，就依序call processStmtNode()
+	//發現底下有decl_list node，就依序call 
 }
 
 
 void processStmtNode(AST_NODE* stmtNode)
 {
+	//看是哪種stmt node
+	//while/for/assign_stmt/if_stmt/function_call_stmt/return_stmt
 }
 
 
