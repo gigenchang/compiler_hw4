@@ -111,7 +111,7 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 void processProgramNode(AST_NODE *programNode)
 {
 	//走過一遍所有的children
-	processDeclarationNode(programNode->child);
+	//processDeclarationNode(programNode->child);
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
@@ -142,22 +142,31 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
-	
+	//deal with type WHILE_STMT as a stmt node
+	//call the children of whileNode(processStmtNode and all processExprRelatedNode)
 }
 
 
 void checkForStmt(AST_NODE* forNode)
 {
+	//deal with type FOR_STMT as a stmt node
+	//call the children of forNode
+	//including some checkAssignmentStmt 
+	//along with NORMAL_ID check if necessary
+	//and all processExprRelatedNode
 }
 
 
 void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
+	//insert table entry for ASSIGN_STMT node
 }
 
 
 void checkIfStmt(AST_NODE* ifNode)
 {
+	//deal with type IF_STMT as a stmt node
+	//call the children same as while statement
 }
 
 void checkWriteFunction(AST_NODE* functionCallNode)

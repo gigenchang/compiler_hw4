@@ -31,14 +31,33 @@ SymbolTableEntry* newSymbolTableEntry(int nestingLevel)
 
 void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
+	if(hashTable[hashIndex] == entry){
+		hashTable[hashIndex] = entry->nextInHashChain; 
+		hashTable[hashIndex]->prevInHashChain = NULL;
+	}
+	else{
+		entry->prevInHashChain->nextInHashChain = entry->nextInHashChain;
+		if(entry->nextInHashChain != NULL)
+			entry->nextInHashChain->prevInHashChain = entry->prevInHashChain;
+	}
+	free(entry);
 }
 
 void enterIntoHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
+	entry->nextInHashChain = symbolTable.hashTable[hashIndex];
+	symbolTable.hashTable[hashIndex]->prevInHashChain = entry;
+	symbolTable.hashTable[hashIndex] = entry;
 }
 
 void initializeSymbolTable()
 {
+	int counter = 0;
+	for(counter; counter < HASH_TABLE_SIZE; counter++)
+		symbolTable.hashTable[counter] = NULL;
+	symbolTable.scopeDisplay = NULL;
+	symbolTable.currentLevel = 0;
+	symbolTable.scopeDisplayElementCount = 0;
 }
 
 void symbolTableEnd()
@@ -47,15 +66,28 @@ void symbolTableEnd()
 
 SymbolTableEntry* retrieveSymbol(char* symbolName)
 {
+	SymbolTableEntry* temp = symbolTable.hashTable[HASH(symbolName)];
+
+	while(temp != NULL){
+		if(strcmp(temp.name, symbolName))
+			temp = temp->nextInHashChain;
+		else 
+			return temp;
+	}
+	return NULL;
 }
 
 SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 {
+	if()
 }
 
 //remove the symbol from the current scope
 void removeSymbol(char* symbolName)
 {
+	SymbolTableEntry* temp = retrieveSymbol(symbolTable);
+	if(symbolTable.currentLevel == symbolName.nestingLevel)
+		removeFromHashTrain(temp);
 }
 
 int declaredLocally(char* symbolName)
@@ -64,8 +96,11 @@ int declaredLocally(char* symbolName)
 
 void openScope()
 {
+	symbolTable.currentLevel++;
+	symbolTable.scopeDisplayElementCount++;
 }
 
 void closeScope()
 {
+	symbolTable.currentLevel--;
 }
