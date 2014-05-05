@@ -226,6 +226,38 @@ void processBlockNode(AST_NODE* blockNode)
 	//stmt_list_node
 	//發現底下有stmt_list node，就依序call processStmtNode()
 	//發現底下有decl_list node，就依序call 
+	AST_NODE* blockNodeChild = blockNode->child->leftmostSibling;
+	while(blockNodeChild != NULL) {
+		//處理該child
+		switch(blockNodeChild->nodeType) {
+			case(VARIABLE_DECL_LIST_NODE):
+				//TODO, call function to handle variable_decl_list_node				
+				break;
+			case(STMT_LIST_NODE):
+				AST_NODE* stmtListNode = blockNodeChild;
+				stmtListNodeChild = stmtListNode->child->leftmostSibling;
+				while(stmtListNodeChild != NULL) {
+					switch(stmtListNodeChild->nodeType){
+						case STMT_NODE:
+							processStmtNode(stmtListNodeChild);
+							break;
+						case BLOCK_NODE:
+							processBlockNode(stmtListNodeChild);
+							break;
+						case NUL_NODE:   
+							//空述句
+							break;
+						default:
+							printf("Error: 無法判斷的STMT_LIST_NODE之子節點")	
+					}
+				}
+				break;
+			default:
+				printf("Error: 無法判斷的blockNode之子節點")
+		}
+		//換到右邊的sibling繼續處理
+		child = child->rightSibling;
+	}
 }
 
 
@@ -233,6 +265,30 @@ void processStmtNode(AST_NODE* stmtNode)
 {
 	//看是哪種stmt node
 	//while/for/assign_stmt/if_stmt/function_call_stmt/return_stmt
+	switch (stmtNode->semantic_value.stmtSemanticValue.kind) {
+		case WHILE_STMT:
+			checkWhileStmt(stmtNode);
+			break;
+		case FOR_STMT:
+			checkForStmt(stmtNode);
+			break;
+		case ASSIGN_STMT:
+			checkAssignmentStmt(stmtNode);
+			break;
+		case IF_STMT:
+			checkIfStmt(stmtNode);
+			break;
+		case FUNCTION_CALL_STMT:
+			checkFunctionCall(stmtNode);
+			break;
+		case RETURN_STMT:
+			checkReturnStmt(stmtNode);
+			break;
+		default:
+			//This should not happen;
+			printf("Error: processStmtNode 出現無法判斷的Stmt");
+	}
+	
 }
 
 
