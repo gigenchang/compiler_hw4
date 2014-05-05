@@ -110,14 +110,47 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 
 void processProgramNode(AST_NODE *programNode)
 {
-	//走過一遍所有的children
-	//processDeclarationNode(programNode->child);
+	AST_NODE* programNodeChild = programNode->child->leftmostSibling;
+
+	while(programNodeChild != NULL) {
+		switch(programNode->nodeType) {
+			case (DECLARATION_NODE):  //for function declaration node
+				processDeclarationNode(blockNodeChild);
+				break;
+			case (VARIABLE_DECL_LIST_NODE):
+				variableDeclListNodeChlid = programNodeChild->child->leftmostSibling;
+				while(variableDeclListNodeChlid != NULL) {
+					processDeclarationNode(variableDeclListNodeChlid);
+					variableDeclListNodeChlid = variableDeclListNodeChlid->rightSibling;	
+				}
+				break;
+			default:
+				printf("Error: 無法判斷的program_node的child node");
+		}
+		programNodeChild = programNodeChild->rightSibling;
+	}
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
 {
 	//處理四種不同的type declration
 	//VARIABLE_DECL  TYPE_DECL   FUNCTION_DECL  FUNCTION_PARAMETER_DECL
+	switch (declNode->semantic_value.declSemanticValue.kind) {
+		case(VARIABLE_DECL):
+			//TODO
+			break;
+		case(TYPE_DECL):
+			//TODO
+			break;
+		case(FUNCTION_DECL):
+			//TODO
+			break:
+		case(FUNCTION_PARAMETER_DECL):
+			//TODO
+			break;
+		default:
+			printf("Error: 在processDeclarationNode發現傳入未知的DeclNode");
+	}
 }
 
 
@@ -250,13 +283,14 @@ void processBlockNode(AST_NODE* blockNode)
 						default:
 							printf("Error: 無法判斷的STMT_LIST_NODE之子節點")	
 					}
+					stmtListNodeChild = stmtListNodeChild->rightSibling;
 				}
 				break;
 			default:
 				printf("Error: 無法判斷的blockNode之子節點")
 		}
 		//換到右邊的sibling繼續處理
-		child = child->rightSibling;
+		blockNodeChild = blockNodeChild->rightSibling;
 	}
 }
 
