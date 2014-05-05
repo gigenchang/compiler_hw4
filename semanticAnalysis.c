@@ -171,12 +171,23 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 	//if assign ...call blabalbal(call checkAssignmentStmt)
 	//if rela ... cla blablabla(call processExprRelatedNode)
 	//call processExprNode
+	if(assignOrExprRelatedNode->nodeType == STMT_NODE){
+		//是assign_stmt
+		//TODO 處理assign下面的ID node和relop Node
+	} else {
+		//是expression(可能是exprNode或const等)
+		processExprRelatedNode(assignOrExprRelatedNode);
+	}
 }
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
 	//deal with type WHILE_STMT as a stmt node
 	//call the children of whileNode(processStmtNode and all processExprRelatedNode)
+	AST_NODE* testNode = whileNode->child->leftmostSibling;
+	AST_NODE* stmtNode = testNode->rightSibling;
+	checkAssignOrExpr(testNode);
+	processStmtNode(stmtNode);
 }
 
 
@@ -187,6 +198,48 @@ void checkForStmt(AST_NODE* forNode)
 	//including some checkAssignmentStmt 
 	//along with NORMAL_ID check if necessary
 	//and all processExprRelatedNode
+	AST_NODE* firstPart = forNode->child->leftmostSibling;
+	AST_NODE* secondPart = firstPart->rightSibling;
+	AST_NODE* thirdPart = secondPart->rightSibling;
+	switch (firstPart->nodeType) {
+		case(NONEMPTY_ASSIGN_EXPR_LIST_NODE):
+			AST_NODE* firstPartChild = firstPart->child;
+			while(firstPartChild != NULL){
+				checkAssignmentStmt(firstPartChild);
+				firstPartChild = firstPartChild->rightSibling;
+			}
+			break;
+		case(NUL_NODE):
+			break;
+		default:
+			printf("Error: forNode part1部份出現無預期的節點");
+	}
+	switch (secondPart->nodeType) {
+		case(NONEMPTY_RELOP_EXPR_LIST_NODE):
+			AST_NODE* secondPartChild = secondPart->child;
+			while(secondPartChild != NULL) {
+				processExprRelatedNode(secondPartChild); //TODO: 不確定對不對
+				secondPartChild = secondPartChild->rightSibling;
+			}
+			break;
+		case(NUL_NODE):
+			break;
+		default:
+			printf("Error: forNode part2部份出現無預期的節點");
+	}
+	switch (thirdPart->nodeType) {
+		case(NONEMPTY_ASSIGN_EXPR_LIST_NODE):
+			AST_NODE* thirdPartChild = thirdPart->child;
+			while(thirdPartChild != NULL){
+				checkAssignmentStmt(thirdPartChild);
+				thirdPartChild = thirdPartChild->rightSibling;
+			}
+			break;
+		case(NUL_NODE):
+			break;
+		default:
+			printf("Error: forNode part3部份出現無預期的節點");
+	}
 }
 
 
@@ -208,10 +261,35 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 
 void checkFunctionCall(AST_NODE* functionCallNode)
 {
+	//function_call_node -> function_name(id_node)
+	//              -> NUL_NODE or NONEMPTY_RELOP_EXPR_LIST_NODE
+	//檢查function name是否存在於symbol_table
+	functionNameNode = functionCallNode->child;
+	char* functionName = functionNameNode->semantic_value.identifierSemanticValue.identifierName;
+	SymbolTableEntry* entry = retrieveSymbol(functionName);
+	if ( entry == NULL) {
+		printErrorMsg(functionNameNode, SYMBOL_UNDECLARED);
+	} else {
+		//檢查function參數, 檢查數量是否符合, type是否match, scalar和array的問題
+		//TODO
+	}
+	
 }
 
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter)
 {
+	//該函數只負責檢查宣告參數和傳進來的參數是否符合, 不負責檢查下一個參數是否符合
+	switch (formalParameter->type->kind){
+		case(SCALAR_TYPE_DESCRIPTOR):
+			//TODO
+			//actualParameter可能會是一個expression,或是array之類的....所以還不會寫
+			break;
+		case(ARRAY_TYPE_DESCRIPTOR):
+			//TODO
+			break;
+		default:
+			printf("Error: checkParameterPassing Function出現無法判斷的formalParameter kind type");
+	} 
 }
 
 
@@ -256,13 +334,12 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
 	switch (exprOrConstNode.nodeType) {
 		case(EXPR_NODE):
-			SymbolAttribute attribute;
-			attribute.attributeKind = VARIABLE_ATTRIBUTE;
-			attribute.attr.typeDescriptor.kind = ;
-			enterSymbol(function_name, attribute);			
+			
 			break;
 		case(CONST_VALUE_NODE):
-			//
+			switch(exprOrConstNode->semantic_value.const1->const_type){
+				case()
+			} 
 			break;
 		default:
 			printf("Error: exprOrConstNode type error\n");
