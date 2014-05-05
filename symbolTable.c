@@ -63,6 +63,7 @@ void initializeSymbolTable()
 void symbolTableEnd()
 {
 	scopeDisplay = NULL;
+	//TODO: what does this function do?
 }
 
 SymbolTableEntry* retrieveSymbol(char* symbolName)
