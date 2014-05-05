@@ -113,9 +113,9 @@ void processProgramNode(AST_NODE *programNode)
 	AST_NODE* programNodeChild = programNode->child->leftmostSibling;
 
 	while(programNodeChild != NULL) {
-		switch(programNode->nodeType) {
+		switch(programNodeChild->nodeType) {
 			case (DECLARATION_NODE):  //for function declaration node
-				processDeclarationNode(blockNodeChild);
+				processDeclarationNode(programNodeChild);
 				break;
 			case (VARIABLE_DECL_LIST_NODE):
 				variableDeclListNodeChlid = programNodeChild->child->leftmostSibling;
@@ -135,18 +135,18 @@ void processDeclarationNode(AST_NODE* declarationNode)
 {
 	//處理四種不同的type declration
 	//VARIABLE_DECL  TYPE_DECL   FUNCTION_DECL  FUNCTION_PARAMETER_DECL
-	switch (declNode->semantic_value.declSemanticValue.kind) {
+	switch (declarationNode->semantic_value.declSemanticValue.kind) {
 		case(VARIABLE_DECL):
-			//TODO
+			//Insert type descriptor entry to symboltable 
 			break;
 		case(TYPE_DECL):
-			//TODO
+			//Insert  entry to symboltable
 			break;
 		case(FUNCTION_DECL):
-			//TODO
+			//Insert function signature entry to symboltable
 			break:
 		case(FUNCTION_PARAMETER_DECL):
-			//TODO
+			//parameter list (point to type descriptor in symboltable)
 			break;
 		default:
 			printf("Error: 在processDeclarationNode發現傳入未知的DeclNode");
@@ -217,10 +217,56 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 
 void processExprRelatedNode(AST_NODE* exprRelatedNode)
 {
+	AST_NODE* exprRelatedNodeChild = exprRelatedNode->child;
+
+	while(exprRelatedNodeChild != NULL) {
+		switch(exprRelatedNodeChild->semantic_value.op.binaryOp) {
+			case BINARY_OP_AND:  
+				//TODO
+				break;
+			case BINARY_OP_OR:
+				//TODO  
+				break;
+			case BINARY_OP_EQ:
+				//TODO  
+				break;
+			case BINARY_OP_GE:  
+				//TODO
+				break;
+			case BINARY_OP_GT:
+				//TODO  
+				break;
+			case BINARY_OP_LT:
+				//TODO  
+				break;
+			case BINARY_OP_LE:  
+				//TODO
+				break;
+			case BINARY_OP_NE:
+				//TODO
+				break;
+			default:
+				printf("Error: exprRelatedNodeChild type error\n");
+		}
+		exprRelatedNodeChild = exprRelatedNodeChild->rightSibling;
+	}
 }
 
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
+	switch (exprOrConstNode.nodeType) {
+		case(EXPR_NODE):
+			SymbolAttribute attribute;
+			attribute.attributeKind = VARIABLE_ATTRIBUTE;
+			attribute.attr.typeDescriptor.kind = ;
+			enterSymbol(function_name, attribute);			
+			break;
+		case(CONST_VALUE_NODE):
+			//
+			break;
+		default:
+			printf("Error: exprOrConstNode type error\n");
+	}
 }
 
 void evaluateExprValue(AST_NODE* exprNode)
@@ -230,6 +276,16 @@ void evaluateExprValue(AST_NODE* exprNode)
 
 void processExprNode(AST_NODE* exprNode)
 {
+	switch (exprRelatedNode->semantic_value.exprSemanticValue.kind) {
+		case(BINARY_OPERATION):
+			//TODO 
+			break;
+		case(UNARY_OPERATION):
+			//TODO
+			break;
+		default:
+			printf("Error: exprRelatedNode type error\n");
+	}
 }
 
 
@@ -244,6 +300,19 @@ void processVariableRValue(AST_NODE* idNode)
 
 void processConstValueNode(AST_NODE* constValueNode)
 {
+	switch ((*constValueNode->semantic_value.const1).const_type) {
+		case(INTEGERC):
+			//TODO 
+			break;
+		case(FLOATC):
+			//TODO
+			break;
+		case(STRINGC):
+			//TODO
+			break;
+		default:
+			printf("Error: constValudNode type error\n");
+	}
 }
 
 
@@ -328,13 +397,46 @@ void processStmtNode(AST_NODE* stmtNode)
 
 void processGeneralNode(AST_NODE *node)
 {
+	switch (node->dataType) {
+		case INT_TYPE:
+			//TODO
+			break;
+		case FLOAT_TYPE:
+			//TODO
+			break;
+		case VOID_TYPE:
+			//TODO
+			break;
+		case INT_PTR_TYPE:
+			//TODO
+			break;
+		case FLOAT_PTR_TYPE:
+			//TODO
+			break;
+		case CONST_STRING_TYPE:
+			//TODO
+			break;
+		case NONE_TYPE:
+			//TODO
+			break;
+		case ERROR_TYPE:
+			//TODO
+			break;
+		default:
+			printf("Error: processStmtNode 出現無法判斷的Stmt");
+	}
 }
 
 void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize)
 {
+	// New an entry to the symbol table with typeDescriptor
 }
 
 
 void declareFunction(AST_NODE* declarationNode)
 {
+	SymbolAttribute attribute;
+	attribute.attributeKind = FUNCTION_SIGNATURE;
+	attribute.attr.functionSignature = ;
+	enterSymbol(function_name, attribute);
 }

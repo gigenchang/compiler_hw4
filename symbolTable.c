@@ -62,6 +62,7 @@ void initializeSymbolTable()
 
 void symbolTableEnd()
 {
+	scopeDisplay = NULL;
 }
 
 SymbolTableEntry* retrieveSymbol(char* symbolName)
@@ -79,19 +80,37 @@ SymbolTableEntry* retrieveSymbol(char* symbolName)
 
 SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 {
-	if()
+	SymbolTableEntry* temp = newSymbolTableEntry(symbolTable.currentLevel);
+	SymbolTableEntry* retr = retrieveSymbol(symbolName);
+	if(retr == NULL){
+		temp->name = symbolName;
+		temp->attribute = attribute;
+		enterIntoHashTrain(HASH(symbolName), temp);
+	}
+	else{ 
+		temp->nextInHashChain = retr->nextInHashChain;
+		temp->prevInHashChain = retr->prevInHashChain;
+		temp->sameNameInOuterLevel = retr;
+	}
+	return temp;
 }
 
 //remove the symbol from the current scope
 void removeSymbol(char* symbolName)
 {
 	SymbolTableEntry* temp = retrieveSymbol(symbolTable);
-	if(symbolTable.currentLevel == symbolName.nestingLevel)
-		removeFromHashTrain(temp);
+	SymbolTableEntry* tempsame = temp->sameNameInOuterLevel;
+	if(tempsame != NULL){
+		removeFromHashTrain(HASH(symbolName), temp);
+		enterIntoHashTrain(HASH(symbolName), tempsame);
+	}
+	else
+		removeFromHashTrain(HASH(symbolName), temp);
 }
 
 int declaredLocally(char* symbolName)
 {
+	return retrieveSymbol(symbolName)->nestingLevel;
 }
 
 void openScope()
