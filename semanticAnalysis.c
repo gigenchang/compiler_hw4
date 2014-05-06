@@ -38,8 +38,8 @@ void evaluateExprValue(AST_NODE* exprNode);
 typedef enum ErrorMsgKind
 {
     SYMBOL_IS_NOT_TYPE,
-    SYMBOL_REDECLARE,
-    SYMBOL_UNDECLARED,
+    SYMBOL_REDECLARE,  //*
+    SYMBOL_UNDECLARED, //*
     NOT_FUNCTION_NAME,
     TRY_TO_INIT_ARRAY,
     EXCESSIVE_ARRAY_DIM_DECLARATION,
@@ -47,10 +47,10 @@ typedef enum ErrorMsgKind
     VOID_VARIABLE,
     TYPEDEF_VOID_ARRAY,
     PARAMETER_TYPE_UNMATCH,
-    TOO_FEW_ARGUMENTS,
-    TOO_MANY_ARGUMENTS,
-    RETURN_TYPE_UNMATCH,
-    INCOMPATIBLE_ARRAY_DIMENSION,
+    TOO_FEW_ARGUMENTS, //*
+    TOO_MANY_ARGUMENTS, //*
+    RETURN_TYPE_UNMATCH, //*
+    INCOMPATIBLE_ARRAY_DIMENSION, //*
     NOT_ASSIGNABLE,
     NOT_ARRAY,
     IS_TYPE_NOT_VARIABLE,
@@ -58,9 +58,9 @@ typedef enum ErrorMsgKind
     STRING_OPERATION,
     ARRAY_SIZE_NOT_INT,
     ARRAY_SIZE_NEGATIVE,
-    ARRAY_SUBSCRIPT_NOT_INT,
-    PASS_ARRAY_TO_SCALAR,
-    PASS_SCALAR_TO_ARRAY
+    ARRAY_SUBSCRIPT_NOT_INT, //*
+    PASS_ARRAY_TO_SCALAR, //*
+    PASS_SCALAR_TO_ARRAY  //*
 } ErrorMsgKind;
 
 void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKind)
@@ -338,7 +338,19 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 			break;
 		case(CONST_VALUE_NODE):
 			switch(exprOrConstNode->semantic_value.const1->const_type){
-				case()
+				case(INTEGERC):
+					ivalue = &(exprorconstnode->semantic_value->const_u);
+					fvalue = NULL;
+					break;
+				case(FLOATC):
+					ivalue = NULL;
+					fvalue = &(exprorconstnode->semantic_value->const_u);
+					break;
+				case(STRINGC):
+					printf("Error: 請勿在expression中使用String Value");
+					break;
+				default:
+					printf("Error: unknown const_value_node const type");
 			} 
 			break;
 		default:
