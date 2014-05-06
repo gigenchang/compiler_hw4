@@ -67,28 +67,54 @@ void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKin
 {
     g_anyErrorOccur = 1;
     printf("Error found in line %d\n", node1->linenumber);
-    /*
     switch(errorMsgKind)
     {
-    default:
-        printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
-        break;
+		case(PASS_ARRAY_TO_SCALAR):
+			printf("Array %s passed to scalar parameter %s.", node1->semantic_value.identifierSemanticValue.identifierName, name2);
+			break;
+		case(PASS_SCALAR_TO_ARRAY):
+			printf("Scalar %s passed to array parameter %s.", nore1->semantic_value.identifierSemanticValue.identifierName, name2);
+			break;
+		default:
+			printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
+			break;
     }
-    */
 }
+
+
 
 
 void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
 {
     g_anyErrorOccur = 1;
     printf("Error found in line %d\n", node->linenumber);
-    /*
     switch(errorMsgKind)
     {
-        printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
-        break;
+		case(SYMBOL_UNDECLARED):
+			printf("ID %s undeclared.", node->semantic_value.identifierSemanticValue.identifierName);
+			break;
+		case(SYMBOL_REDECLARE):
+			printf("ID %s redeclared.", node->semantic_value.identifierSemanticValue.identifierName);
+			break;
+		case(TOO_FEW_ARGUMENTS):
+			printf("too few arguments to function %s.", node->semantic_value.identifierSemanticValue.identifierName); //要傳functionStmt下的ID node進去
+			break;
+		case(TOO_MANY_ARGUMENTS):
+			printf("too many arguments to function %s.", node->semantic_value.identifierSemanticValue.identifierName); //要傳functionStmt下的ID node進去
+			break;
+		case(RETURN_TYPE_UNMATCH):
+			printf("Incompatible return type.");
+			break;
+		case(INCOMPATIBLE_ARRAY_DIMENSION):
+			printf("Incompatible array dimensions.");
+			break;
+		case(ARRAY_SUBSCRIPT_NOT_INT):
+			printf("Array subscript is not an integer.");
+			break;
+		default:
+			printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
+			break;
     }
-    */
 }
 
 
@@ -246,6 +272,16 @@ void checkForStmt(AST_NODE* forNode)
 void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
 	//insert table entry for ASSIGN_STMT node
+	//該function只處理 a=3 之類的stmt, 不處理int a=3
+	AST_NODE* leftIDNode = assignmentNode->child;
+	AST_NODE* rightRelopExprNode = leftIDNode->rightSibling;
+	//1. 要先檢查左值是否宣告過
+	processVariableLValue(leftIDNode);
+	//2. 要檢查出現在右邊的是否都宣告過
+	//TODO
+	//3. 要檢查左右型別是否相符(這次作業是否必要？)
+	//TODO
+
 }
 
 
@@ -253,6 +289,10 @@ void checkIfStmt(AST_NODE* ifNode)
 {
 	//deal with type IF_STMT as a stmt node
 	//call the children same as while statement
+	AST_NODE* testNode = ifNode->child;
+	AST_NODE* stmtNode = testNode->rightSibling;
+	checkAssignOrExpr(testNode);
+	processStmtNode(stmtNode);
 }
 
 void checkWriteFunction(AST_NODE* functionCallNode)
