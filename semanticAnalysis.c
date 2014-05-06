@@ -38,8 +38,8 @@ void evaluateExprValue(AST_NODE* exprNode);
 typedef enum ErrorMsgKind
 {
     SYMBOL_IS_NOT_TYPE,
-    SYMBOL_REDECLARE,  //*
-    SYMBOL_UNDECLARED, //*
+    SYMBOL_REDECLARE,  //**
+    SYMBOL_UNDECLARED, //**
     NOT_FUNCTION_NAME,
     TRY_TO_INIT_ARRAY,
     EXCESSIVE_ARRAY_DIM_DECLARATION,
@@ -49,7 +49,7 @@ typedef enum ErrorMsgKind
     PARAMETER_TYPE_UNMATCH,
     TOO_FEW_ARGUMENTS, //*
     TOO_MANY_ARGUMENTS, //*
-    RETURN_TYPE_UNMATCH, //*
+    RETURN_TYPE_UNMATCH, //**
     INCOMPATIBLE_ARRAY_DIMENSION, //*
     NOT_ASSIGNABLE,
     NOT_ARRAY,
@@ -58,7 +58,7 @@ typedef enum ErrorMsgKind
     STRING_OPERATION,
     ARRAY_SIZE_NOT_INT,
     ARRAY_SIZE_NEGATIVE,
-    ARRAY_SUBSCRIPT_NOT_INT, //*
+    ARRAY_SUBSCRIPT_NOT_INT, //**
     PASS_ARRAY_TO_SCALAR, //*
     PASS_SCALAR_TO_ARRAY  //*
 } ErrorMsgKind;
@@ -190,6 +190,57 @@ void processTypeNode(AST_NODE* idNodeAsType)
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
 {
 	//底層，接下來要插入Entry了
+	SymbolAttribute* symbolAttr = (SymbolAttributei*)malloc(sizeof(SymbolAttribute));
+	switch (SymbolAttributeKind) {
+		case(VARIABLE_ATTRIBUTE):
+			symbolAttr->attributeKind = VARIABLE_ATTRIBUTE;
+			symbolAttr->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+			switch (declarationNode->semantic_value.identifierSemanticValue.kind) {
+				case(NORMAL_ID):
+					symbolAttr->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+					symbolAttr->attr.typeDescriptor->properties.dataType = declartionNode->leftmostSibling->dataType;
+					break;
+				case(ARRAY_ID):
+					symbolAttr->attr.typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
+					AST_NODE* declNodechild = declartionNode->child;
+					int currentDimensionIndex = 0;
+					while(declNodechild != NULL) {
+						symbolAttr->attr.typeDescriptor->properties.arrayProperties.dimension += 1;
+						symbolAttr->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
+
+						declNodechild = declNodechild->rightSibling;
+						currentDimensionIndex += 1;
+					}
+					symbolAttr->attr.typeDescriptor->properties.arrayProperties.elementType = declartionNode->leftmostSibling->dataType;
+					break;
+				default:
+					printf("Error: 無法判斷的declartionNode semantic type\n");
+			} 
+			break;
+		case(TYPE_ATTRIBUTE):
+			symbolAttr->attributeKind = TYPE_ATTRIBUTE;
+			//TODO
+			printf("尚未實作typedef\n");
+			break;
+		default:
+			printf("Error: 未知的declarationAttr\n");
+	}
+	SymbolTableEntry* entryRetrieved = retrieveSymbol(declartionNode->semantic_value.identifierSemanticValue.identifierName);
+	char* declaredName = declartionNode->semantic_value.identifierSemanticValue.identifierName;
+	if (entryRetrieved == NULL) {
+		enterSymbol(declaredName, symbolAttr);
+	} else {
+		SymbolTableEntry* sameScopeEntry = SymbolTable.scopeDisplay[SymbolTable.scopeDisplayElementCount];
+		while(sameScopeEntry != NULL) {
+			if (sameScopeEntry->name == declaredName) {
+				printErrorMsg(declartionNode, SYMBOL_REDECLARE);
+				return;
+			}
+			sameScopeEntry = sameScopeEntry->nextInSameLevel;
+		}
+		enterSymbol(declaredName, symbolAttr);
+	}
+	
 }
 
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
@@ -311,9 +362,30 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 		printErrorMsg(functionNameNode, SYMBOL_UNDECLARED);
 	} else {
 		//檢查function參數, 檢查數量是否符合, type是否match, scalar和array的問題
-		//TODO
+		Parameter* para = entry->attribute->attr.functionSignature->parameterList;
+		AST_NODE* callParaListNode = functionNameNode->rightSibling;
+		AST_NODE* paraNode;
+		if (callParaListNode.nodeType == NUL_NODE) {
+			paraNode = NULL;
+		} else {
+			paraNode = callParaListNode->child;
+		}
+		
+		while(para != NULL && paraNode != NULL) {
+			checkParameterPassing(para, child);
+
+			para = para->next;
+			paraNode = paraNode->rightSibling;
+		}
+
+		if (para == NULL && paraNode != NULL) {
+			printErrorMsg(functionNameNode, TOO_MANY_ARGUMENTS);
+		} else if (para != NULL && paraNode == NULL) {
+			printErrorMsg(functionNameNode, TOO_FEW_ARGUMENTS);
+		}
+
+
 	}
-	
 }
 
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter)
@@ -321,14 +393,79 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 	//該函數只負責檢查宣告參數和傳進來的參數是否符合, 不負責檢查下一個參數是否符合
 	switch (formalParameter->type->kind){
 		case(SCALAR_TYPE_DESCRIPTOR):
-			//TODO
+			switch(actualParameter->nodeType){
+				case(IDENTIFIER_NODE):
+					//檢查是否為array, 若是，則再度確認是否為0維array(scalar)
+					if(actualParameter->semantic_value.identifierSemanticValue.kind == ARRAY_ID) {
+						int childNumberOfActualPara = 0;
+						AST_NODE* actualParaChild = actualParameter->child;
+						while(actualParaChild != NULL){
+							childNumberOfActualPara += 1;
+							actualParaChild = actualParaChild->rightSibling;
+						}
+						
+						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
+						if (entry == NULL) {
+							//如果傳進去的id不存在，直接噴錯
+							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
+							return;
+						}
+						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimensions;
+						int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
+						if (dimensionsOfActualPara != 0) {
+								//如果傳入的id的維度不是0, 代表不是scalar
+							printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+						}
+					}
+					break;
+				case (CONST_VALUE_NODE):
+				case (EXPR_NODE):
+				default:
+					printf("預期參數為scalar, 收到參數包含了expression或const, 視為scalar\n");
+			}
 			//actualParameter可能會是一個expression,或是array之類的....所以還不會寫
 			break;
 		case(ARRAY_TYPE_DESCRIPTOR):
-			//TODO
+			switch(actualParameter->nodeType){
+				case (IDENTIFIER_NODE):
+					if(actualParameter->semantic_value.identifierSemanticValue.kind == ARRAY_ID) {
+						//check array dimension
+						int expectedDimensions = formalParameter->type->properties.arrayProperties.dimensions;				
+						int childNumberOfActualPara = 0;
+						AST_NODE* actualParaChild = actualParameter->child;
+						while(actualParaChild != NULL){
+							childNumberOfActualPara += 1;
+							actualParaChild = actualParaChild->rightSibling;
+						}
+						
+						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
+						if (entry == NULL) {
+							//如果傳進去的id不存在，直接噴錯
+							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
+							return;
+						}
+						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimensions;
+						int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
+						if (dimensionsOfActualPara != expectedDimensions) {
+							if (dimensionsOfActualPara == 0) {
+								//如果傳入的id的維度是0, 代表是scalar
+								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_SCALAR_TO_ARRAY);
+							} else {
+								printErrorMsgSpecial(actualParameter, INCOMPATIBLE_ARRAY_DIMENSION);
+							}
+						}
+					} else {
+						printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_SCALAR_TO_ARRAY);
+					}
+					break;
+				case (CONST_VALUE_NODE):
+				case (EXPR_NODE):
+					printf("預期參數為Array, 收到參數包含了expression或const, 不處理\n");
+					break;
+			}
 			break;
 		default:
-			printf("Error: checkParameterPassing Function出現無法判斷的formalParameter kind type");
+			printf("Error: checkParameterPassing Function出現無法判斷的formalParameter kind type\n");
 	} 
 }
 
@@ -374,17 +511,61 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
 	switch (exprOrConstNode.nodeType) {
 		case(EXPR_NODE):
-			
+			switch (exprOrConstNode->semantic_value.exprSemanticValue.kind) {
+				case(BINARY_OPERATION):
+					switch(exprOrConstNode->semantic_value.op.binaryOp){
+						case BINARY_OP_AND:  
+						case BINARY_OP_OR:
+						case BINARY_OP_EQ:
+						case BINARY_OP_GE:  
+						case BINARY_OP_GT:
+						case BINARY_OP_LT:
+						case BINARY_OP_LE:  
+						case BINARY_OP_NE:
+							*iValue = 1;
+							*fValue = 0.0;
+							break;
+						case BINARY_OP_ADD:
+						case BINARY_OP_SUB:
+						case BINARY_OP_MUL:
+						case BINARY_OP_DIV:
+							AST_NODE* leftChild = exprOrConstNode->child;
+							AST_NODE* rightChild = leftChild->rightSibling;
+							getExprOrConstValue(leftChild, iValue, fValue);
+							if (*iValue == 1) {
+								getExprOrConstValue(rightSibling, iValue, fValue);
+								if (*iValue == 1) {
+									return;
+								} else {
+									*iValue = 0;
+									*fValue = 1.0;
+								}
+							} else {
+								return;
+							}
+
+							break;
+						default:
+							printf("Error: 出現無法預期的binary operator\n");
+					}
+					break;
+				case(UNARY_OPERATION):
+					getExprOrConstValue(exprOrConstNode->child, iValue, fvalue);
+					break:
+				default:
+					printf("Error: getExprOrConstValue的expr node出現無法預期的op\n");
+			}
 			break;
+		//TODO: 涵蓋functinocall, idnode
 		case(CONST_VALUE_NODE):
 			switch(exprOrConstNode->semantic_value.const1->const_type){
 				case(INTEGERC):
-					ivalue = &(exprorconstnode->semantic_value->const_u);
-					fvalue = NULL;
+					*ivalue = 1;
+					*fvalue = 0.0;
 					break;
 				case(FLOATC):
-					ivalue = NULL;
-					fvalue = &(exprorconstnode->semantic_value->const_u);
+					*ivalue = 0;
+					*fvalue = 1.0;
 					break;
 				case(STRINGC):
 					printf("Error: 請勿在expression中使用String Value");
@@ -420,10 +601,42 @@ void processExprNode(AST_NODE* exprNode)
 
 void processVariableLValue(AST_NODE* idNode)
 {
+	SymbolTableEntry* entryRetrieved = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
+	if (entryRetrieved == NULL) {
+		printErrorMsg(idNode, SYMBOL_UNDECLARED);
+	} else {
+		//沒有做check L value 和 R value 的 type	
+	}
 }
 
 void processVariableRValue(AST_NODE* idNode)
 {
+	SymbolTableEntry* entryRetrieved = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
+	if (entryRetrieved == NULL) {
+		printErrorMsg(idNode, SYMBOL_UNDECLARED);
+	} else {
+		switch(idNode->semantic_value.identifierSemanticValue.kind){
+			case(ARRAY_ID):
+				int i;
+				float f;
+				AST_NODE* idNodeChild = idNode->child; 
+				while(idNodeChild != NULL){
+					i = -1;
+					f = -1.0;
+					getExprOrConstValue(idNodeChild, &i, &f);
+					if (i != 1) {
+						printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
+					}
+
+					idNodeChild = idNodeChild->child;
+				}
+				break;
+			case(NORMAL_ID):
+				break;
+			default:
+				printf("Error:遇到無法判斷的RValue的id 的id kind(array or scalar)\n");
+		}
+	}
 }
 
 
@@ -447,6 +660,41 @@ void processConstValueNode(AST_NODE* constValueNode)
 
 void checkReturnStmt(AST_NODE* returnNode)
 {
+	AST_NODE* returnNodeChild = returnNode->chlid;
+	AST_NODE* returnNodeParent = returnNode->parent;
+	while(returnNodeParent->semantic_value.declSemanticValue.kind != FUNCTION_DECL){
+		returnNodeParent = returnNodeParent->parent;
+	}
+	char* returnTypeID = returnNodeParent->child->semantic_value.identifierSemanticValue.identifierName;
+	if (returnNodeChild.nodeType == NUL_NODE) {
+		if (strcmp(returnTypeID, "void")) {
+			printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
+		}
+	} else {
+		//確認expression的變數或function call宣告正確性
+		processExprRelatedNode(returnNodeChild);
+
+		//確認return type是否match
+		int i = -1;
+		float f = -1;
+		getExprOrConstValue(returnNodeChild, &i, &f);
+		//如果i, f都沒有變過，代表出現無法判斷的type(使用了沒有宣告過的變數)
+		if (i == -1) {
+			printf("Error: 無法判斷return expression的type");
+		} else {
+			if (i == 0 && f > 0.5) {
+				if (strcmp(returnTypeID, "float")){
+					printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
+				}
+			} else {
+				if (strcmp(returnTypeID, "int")) {
+					printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
+				}
+			}
+		}
+
+	}
+
 }
 
 
