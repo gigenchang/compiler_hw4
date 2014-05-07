@@ -860,6 +860,7 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 
 void declareFunction(AST_NODE* declarationNode)
 {
+	// Declare function
 	SymbolAttribute attribute;
 	attribute.attributeKind = FUNCTION_SIGNATURE;
 	attribute.attr.functionSignature = ;
