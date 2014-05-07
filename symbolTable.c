@@ -55,14 +55,13 @@ void initializeSymbolTable()
 	int counter = 0;
 	for(counter; counter < HASH_TABLE_SIZE; counter++)
 		symbolTable.hashTable[counter] = NULL;
-	symbolTable.scopeDisplay = NULL;
+	symbolTable.scopeDisplay = malloc(256 * sizeof(SymbolTableEntry*));
 	symbolTable.currentLevel = 0;
 	symbolTable.scopeDisplayElementCount = 0;
 }
 
 void symbolTableEnd()
 {
-	scopeDisplay = NULL;
 	//TODO: what does this function do?
 }
 
@@ -83,16 +82,20 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 {
 	SymbolTableEntry* temp = newSymbolTableEntry(symbolTable.currentLevel);
 	SymbolTableEntry* retr = retrieveSymbol(symbolName);
+	temp->name = symbolName;
+	temp->attribute = attribute;
 	if(retr == NULL){
-		temp->name = symbolName;
-		temp->attribute = attribute;
 		enterIntoHashTrain(HASH(symbolName), temp);
 	}
 	else{ 
 		temp->nextInHashChain = retr->nextInHashChain;
 		temp->prevInHashChain = retr->prevInHashChain;
+		retr->nextInHashChain->prevInHashChain = temp;
+		retr->prevInHashChain->nextInHashChain = temp;
 		temp->sameNameInOuterLevel = retr;
 	}
+	temp->nextInSameLevel = symbolTable.scopeDisplay[scopeDisplayElementCount];
+	symbolTable.scopeDisplay[scopeDisplayElementCount] = temp;
 	return temp;
 }
 
@@ -100,13 +103,18 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 void removeSymbol(char* symbolName)
 {
 	SymbolTableEntry* temp = retrieveSymbol(symbolTable);
+	if(temp == NULL)
+		return;
 	SymbolTableEntry* tempsame = temp->sameNameInOuterLevel;
 	if(tempsame != NULL){
-		removeFromHashTrain(HASH(symbolName), temp);
-		enterIntoHashTrain(HASH(symbolName), tempsame);
+		tempsame->nextInHashChain = temp->nextInHashChain;
+		tempsame->prevInHashChain = temp->prevInHashChain;
+		temp->nextInHashChain->prevInHashChain = tempsame;
+		temp->prevInHashChain->nextInHashChain = tempsame;
 	}
 	else
-		removeFromHashTrain(HASH(symbolName), temp);
+		temp->nextInHashChain->prevInHashChain = temp->prevInHashChain;
+		temp->prevInHashChain->nextInHashChain = temp->nextInHashChain;
 }
 
 int declaredLocally(char* symbolName)
@@ -118,6 +126,7 @@ void openScope()
 {
 	symbolTable.currentLevel++;
 	symbolTable.scopeDisplayElementCount++;
+	symbolTable.scopeDisplay[scopeDisplayElementCount] = NULL;
 }
 
 void closeScope()
