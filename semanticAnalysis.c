@@ -250,7 +250,8 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 	//call processExprNode
 	if(assignOrExprRelatedNode->nodeType == STMT_NODE){
 		//是assign_stmt
-		//TODO 處理assign下面的ID node和relop Node
+		//處理assign下面的ID node和relop Node
+		checkAssignmentStmt(assignOrExprRelatedNode);
 	} else {
 		//是expression(可能是exprNode或const等)
 		processExprRelatedNode(assignOrExprRelatedNode);
@@ -329,8 +330,9 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
 	//1. 要先檢查左值是否宣告過
 	processVariableLValue(leftIDNode);
 	//2. 要檢查出現在右邊的是否都宣告過
-	//TODO
-	//3. 要檢查左右型別是否相符(這次作業是否必要？)
+	processExprRelatedNode(rightRelopExprNode);
+	
+	//3. 要檢查左右型別是否相符(這次作業是否必要？應該是沒必要)
 	//TODO
 
 }
@@ -474,38 +476,51 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 
 void processExprRelatedNode(AST_NODE* exprRelatedNode)
 {
-	AST_NODE* exprRelatedNodeChild = exprRelatedNode->child;
-
-	while(exprRelatedNodeChild != NULL) {
-		switch(exprRelatedNodeChild->semantic_value.op.binaryOp) {
-			case BINARY_OP_AND:  
-				//TODO
-				break;
-			case BINARY_OP_OR:
-				//TODO  
-				break;
-			case BINARY_OP_EQ:
-				//TODO  
-				break;
-			case BINARY_OP_GE:  
-				//TODO
-				break;
-			case BINARY_OP_GT:
-				//TODO  
-				break;
-			case BINARY_OP_LT:
-				//TODO  
-				break;
-			case BINARY_OP_LE:  
-				//TODO
-				break;
-			case BINARY_OP_NE:
-				//TODO
-				break;
-			default:
-				printf("Error: exprRelatedNodeChild type error\n");
-		}
-		exprRelatedNodeChild = exprRelatedNodeChild->rightSibling;
+	//收到的node其實不一定是expr, 有可能是expr, const, 或id node
+	switch (exprRelatedNode->nodeType) {
+		case EXPR_NODE:
+			switch (exprRelatedNode->semantic_value.exprSemanticValue.kind) {
+				case(BINARY_OPERATION):
+					switch(exprRelatedNode->semantic_value.op.binaryOp) {
+						case BINARY_OP_AND:  
+						case BINARY_OP_OR:
+						case BINARY_OP_EQ:
+						case BINARY_OP_GE:  
+						case BINARY_OP_GT:
+						case BINARY_OP_LT:
+						case BINARY_OP_LE:  
+						case BINARY_OP_NE:
+							AST_NODE* leftChild = exprRelatedNode->child;
+							AST_NODE* rightChild = leftChild->rightSibling;
+							processExprRelatedNode(leftChild);
+							processExprRelatedNode(rightChild);
+							break;
+						case BINARY_OP_ADD:
+						case BINARY_OP_SUB:
+						case BINARY_OP_MUL:
+						case BINARY_OP_DIV:
+							AST_NODE* leftChild = exprRelatedNode->child;
+							AST_NODE* rightChild = leftChild->rightSibling;
+							processExprNode(leftChild);
+							processExprNode(rightChild);
+							break;
+						default:
+							printf("Error: exprRelatedNodeChild type error\n");
+					}
+					break;
+				case(UNARY_OPERATION):
+					AST_NODE* child = exprRelatedNode->child;
+					processExprRelatedNode(child);
+					break;
+				default:
+					printf("Error: processRxprRelatedNode function出現無法判斷binary或unary的Expr Node");
+			break;
+		case IDENTIFIER_NODE:
+		case CONST_VALUE_NODE:
+			processExprNode(exprRelatedNode);
+			break;
+		default:
+			printf("Error: 無法判斷的ExprRelatedNode Type");
 	}
 }
 
@@ -588,15 +603,40 @@ void evaluateExprValue(AST_NODE* exprNode)
 
 void processExprNode(AST_NODE* exprNode)
 {
-	switch (exprRelatedNode->semantic_value.exprSemanticValue.kind) {
-		case(BINARY_OPERATION):
-			//TODO 
+	switch(exprNode->nodeType){
+		case EXPR_NODE:
+			switch (exprNode->semantic_value.exprSemanticValue.kind) {
+				case(BINARY_OPERATION):
+					switch(exprRelatedNode->semantic_value.op.binaryOp) {
+						case BINARY_OP_ADD:
+						case BINARY_OP_SUB:
+						case BINARY_OP_MUL:
+						case BINARY_OP_DIV:
+							AST_NODE* leftChild = exprRelatedNode->child;
+							AST_NODE* rightChild = leftChild->rightSibling;
+							processExprNode(leftChild);
+							processExprNode(rightChild);
+							break;
+						default:
+							printf("Error: 無法判斷的Binary Operation\n");
+					}
+					break;
+				case(UNARY_OPERATION):
+					AST_NODE* child = exprRelatedNode->child;
+					processExprNode(child);
+					break;
+				default:
+					printf("Error: exprRelatedNode type error\n");
+			}
+			break;	
+		case CONST_VALUE_NODE:
+			processConstValueNode(exprNode);
 			break;
-		case(UNARY_OPERATION):
-			//TODO
+		case IDENTIFIER_NODE:
+			processVariableRValue(exprNode);
 			break;
 		default:
-			printf("Error: exprRelatedNode type error\n");
+		   printf("Error: 出現無法判斷的ExprNode的type\n");
 	}
 }
 
@@ -668,7 +708,7 @@ void checkReturnStmt(AST_NODE* returnNode)
 		returnNodeParent = returnNodeParent->parent;
 	}
 	char* returnTypeID = returnNodeParent->child->semantic_value.identifierSemanticValue.identifierName;
-	if (returnNodeChild.nodeType == NUL_NODE) {
+	if (returnNodeChild->nodeType == NUL_NODE) {
 		if (strcmp(returnTypeID, "void")) {
 			printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
 		}

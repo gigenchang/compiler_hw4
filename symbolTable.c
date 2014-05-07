@@ -55,7 +55,7 @@ void initializeSymbolTable()
 	int counter = 0;
 	for(counter; counter < HASH_TABLE_SIZE; counter++)
 		symbolTable.hashTable[counter] = NULL;
-	symbolTable.scopeDisplay = malloc(256 * sizeof(SymbolTableEntry*));
+	symbolTable.scopeDisplay = (symbolTableEntry**)malloc(256 * sizeof(SymbolTableEntry*));
 	symbolTable.currentLevel = 0;
 	symbolTable.scopeDisplayElementCount = 0;
 }
