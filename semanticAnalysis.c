@@ -203,10 +203,17 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 				case(ARRAY_ID):
 					symbolAttr->attr.typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
 					AST_NODE* declNodechild = declartionNode->child;
-					int currentDimensionIndex = 0;
+					int currentDimensionIndex = 0, i;
+					float f;
 					while(declNodechild != NULL) {
 						symbolAttr->attr.typeDescriptor->properties.arrayProperties.dimension += 1;
 						symbolAttr->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
+						i = -1;
+						f = -1.0;
+						getExprOrConstValue(declNodeChild, &i, &f);
+						if (i != 1) {
+							printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
+						}
 
 						declNodechild = declNodechild->rightSibling;
 						currentDimensionIndex += 1;
