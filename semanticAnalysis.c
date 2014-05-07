@@ -190,8 +190,8 @@ void processTypeNode(AST_NODE* idNodeAsType)
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
 {
 	//底層，接下來要插入Entry了
-	SymbolAttribute* symbolAttr = (SymbolAttributei*)malloc(sizeof(SymbolAttribute));
-	switch (SymbolAttributeKind) {
+	SymbolAttribute* symbolAttr = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+	switch (isVariableOrTypeAttribute) {
 		case(VARIABLE_ATTRIBUTE):
 			symbolAttr->attributeKind = VARIABLE_ATTRIBUTE;
 			symbolAttr->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
@@ -372,7 +372,7 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 		}
 		
 		while(para != NULL && paraNode != NULL) {
-			checkParameterPassing(para, child);
+			checkParameterPassing(para, paraNode);
 
 			para = para->next;
 			paraNode = paraNode->rightSibling;
@@ -429,6 +429,14 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 			switch(actualParameter->nodeType){
 				case (IDENTIFIER_NODE):
 					if(actualParameter->semantic_value.identifierSemanticValue.kind == ARRAY_ID) {
+						//check table first
+						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
+						if (entry == NULL) {
+							//如果傳進去的id不存在，直接噴錯
+							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
+							return;
+						}
+
 						//check array dimension
 						int expectedDimensions = formalParameter->type->properties.arrayProperties.dimensions;				
 						int childNumberOfActualPara = 0;
@@ -438,12 +446,6 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 							actualParaChild = actualParaChild->rightSibling;
 						}
 						
-						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
-						if (entry == NULL) {
-							//如果傳進去的id不存在，直接噴錯
-							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
-							return;
-						}
 						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimensions;
 						int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
 						if (dimensionsOfActualPara != expectedDimensions) {
@@ -628,7 +630,7 @@ void processVariableRValue(AST_NODE* idNode)
 						printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
 					}
 
-					idNodeChild = idNodeChild->child;
+					idNodeChild = idNodeChild->rightSibling;
 				}
 				break;
 			case(NORMAL_ID):
@@ -713,8 +715,7 @@ void processBlockNode(AST_NODE* blockNode)
 				//TODO, call function to handle variable_decl_list_node				
 				break;
 			case(STMT_LIST_NODE):
-				AST_NODE* stmtListNode = blockNodeChild;
-				stmtListNodeChild = stmtListNode->child->leftmostSibling;
+				AST_NODE* stmtListNodeChild = blockNodeChild->child->leftmostSibling;
 				while(stmtListNodeChild != NULL) {
 					switch(stmtListNodeChild->nodeType){
 						case STMT_NODE:
