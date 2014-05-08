@@ -163,10 +163,10 @@ void processDeclarationNode(AST_NODE* declarationNode)
 	//VARIABLE_DECL  TYPE_DECL   FUNCTION_DECL  FUNCTION_PARAMETER_DECL
 	switch (declarationNode->semantic_value.declSemanticValue.kind) {
 		case(VARIABLE_DECL):
-			//Insert type descriptor entry to symboltable 
+			declareIdList(declarationNode, VARIABLE_ATTRIBUTE, 0); //TODO 最後一個參數不知道要傳什麼
 			break;
 		case(TYPE_DECL):
-			//Insert  entry to symboltable
+			declareIdList(declarationNode, TYPE_ATTRIBUTE, 0); //TODO 最後一個參數不知道要傳什麼
 			break;
 		case(FUNCTION_DECL):
 			//Insert function signature entry to symboltable
@@ -182,72 +182,67 @@ void processDeclarationNode(AST_NODE* declarationNode)
 
 void processTypeNode(AST_NODE* idNodeAsType)
 {
-	//**給ID Node
-	//**可能是NORMAL_ID/ARRAY_ID/WITH_INIT_ID
+	//處理type node
+	//typedef int A;
 }
 
 
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
 {
-	//底層，接下來要插入Entry了
+	//傳入的node大概會長這樣子
+	//decl_node->int
+	//         ->id (可能是NORMAL_ID)
+	//         ->id (或是ARRAY_ID)
+	//         ->id (或是有expression的WITH_INIT_ID)
+	AST_NODE* declareTypeNode = declarationNode->child;
+	AST_NODE* declareIdNode = declareTypeNode->rightSibling;
+
 	SymbolAttribute* symbolAttr = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
 	switch (isVariableOrTypeAttribute) {
 		case(VARIABLE_ATTRIBUTE):
 			symbolAttr->attributeKind = VARIABLE_ATTRIBUTE;
-			symbolAttr->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
-			switch (declarationNode->semantic_value.identifierSemanticValue.kind) {
-				case(NORMAL_ID):
-					symbolAttr->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
-					symbolAttr->attr.typeDescriptor->properties.dataType = declartionNode->leftmostSibling->dataType;
-					break;
-				case(ARRAY_ID):
-					symbolAttr->attr.typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
-					AST_NODE* declNodechild = declartionNode->child;
-					int currentDimensionIndex = 0, i;
-					float f;
-					while(declNodechild != NULL) {
-						symbolAttr->attr.typeDescriptor->properties.arrayProperties.dimension += 1;
-						symbolAttr->attr.typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
-						i = -1;
-						f = -1.0;
-						getExprOrConstValue(declNodeChild, &i, &f);
-						if (i != 1) {
-							printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
-						}
-
-						declNodechild = declNodechild->rightSibling;
-						currentDimensionIndex += 1;
-					}
-					symbolAttr->attr.typeDescriptor->properties.arrayProperties.elementType = declartionNode->leftmostSibling->dataType;
-					break;
-				default:
-					printf("Error: 無法判斷的declartionNode semantic type\n");
-			} 
 			break;
 		case(TYPE_ATTRIBUTE):
 			symbolAttr->attributeKind = TYPE_ATTRIBUTE;
-			//TODO
-			printf("尚未實作typedef\n");
 			break;
 		default:
-			printf("Error: 未知的declarationAttr\n");
+			printf("Error: 未知的SymboalAttributeKind\n");
 	}
-	SymbolTableEntry* entryRetrieved = retrieveSymbol(declartionNode->semantic_value.identifierSemanticValue.identifierName);
-	char* declaredName = declartionNode->semantic_value.identifierSemanticValue.identifierName;
-	if (entryRetrieved == NULL) {
-		enterSymbol(declaredName, symbolAttr);
-	} else {
-		SymbolTableEntry* sameScopeEntry = SymbolTable.scopeDisplay[SymbolTable.scopeDisplayElementCount];
-		while(sameScopeEntry != NULL) {
-			if (sameScopeEntry->name == declaredName) {
-				printErrorMsg(declartionNode, SYMBOL_REDECLARE);
-				return;
+	symbolAttr->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+	while(declareIdNode != NULL){
+		switch (declareIdNode->semantic_value.identifierSemanticValue.kind) {
+			case(NORMAL_ID):
+				symbolAttr->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+				symbolAttr->attr.typeDescriptor->properties.dataType = declartionNode->leftmostSibling->dataType;
+				break;
+			case(ARRAY_ID):
+				processDeclDimList(declareIdNode, symbolAttr->attr.typeDescriptor, 0); //TODO: 我也不知道為什麼最後一個參數要填0
+				break;
+			default:
+				printf("Error: 無法判斷的declartionNode semantic type\n");
+		} 
+		
+		//接下來要插入Entry了
+		//先檢查有沒有同名的重複宣告
+		SymbolTableEntry* entryRetrieved = retrieveSymbol(declartionNode->semantic_value.identifierSemanticValue.identifierName);
+		char* declaredName = declartionNode->semantic_value.identifierSemanticValue.identifierName;
+		if (entryRetrieved == NULL) {
+			enterSymbol(declaredName, symbolAttr);
+		} else {
+			SymbolTableEntry* sameScopeEntry = SymbolTable.scopeDisplay[SymbolTable.scopeDisplayElementCount];
+			while(sameScopeEntry != NULL) {
+				if (sameScopeEntry->name == declaredName) {
+					printErrorMsg(declartionNode, SYMBOL_REDECLARE);
+					return;
+				}
+				sameScopeEntry = sameScopeEntry->nextInSameLevel;
 			}
-			sameScopeEntry = sameScopeEntry->nextInSameLevel;
+			enterSymbol(declaredName, symbolAttr);
 		}
-		enterSymbol(declaredName, symbolAttr);
+
+		//處理下一個ID node
+		declareIdNode = declareIdNode->rightSibling;
 	}
-	
 }
 
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
@@ -610,6 +605,7 @@ void evaluateExprValue(AST_NODE* exprNode)
 
 void processExprNode(AST_NODE* exprNode)
 {
+	//TODO 處理可能出現rel_expr node的問題
 	switch(exprNode->nodeType){
 		case EXPR_NODE:
 			switch (exprNode->semantic_value.exprSemanticValue.kind) {
@@ -854,7 +850,27 @@ void processGeneralNode(AST_NODE *node)
 
 void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize)
 {
-	// New an entry to the symbol table with typeDescriptor
+	//該function負責專心專注於
+	symbolAttr->attr.typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
+	AST_NODE* idNodeChild = idNode->child;
+	int currentDimensionIndex = 0;
+	int i;
+	float f;
+	while(idNodeChild != NULL) {
+		typeDescriptor->properties.arrayProperties.dimension += 1;
+		typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
+		i = -1;
+		f = -1.0;
+		//判斷a[expr] 中的expr是否會回傳int
+		getExprOrConstValue(declNodeChild, &i, &f);
+		if (i != 1) {
+			printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
+		}
+
+		declNodechild = declNodechild->rightSibling;
+		currentDimensionIndex += 1;
+	}
+	typeDescriptor->properties.arrayProperties.elementType = idNode->leftmostSibling->dataType;
 }
 
 
