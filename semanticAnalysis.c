@@ -182,8 +182,24 @@ void processDeclarationNode(AST_NODE* declarationNode)
 
 void processTypeNode(AST_NODE* idNodeAsType)
 {
-	//處理type node
-	//typedef int A;
+	//負責檢查該Type(其實是一個Id node)是否有宣告過，如果沒有的話噴錯
+	//如果是int, float, void或是有宣告過的話，那就幫他設定DataType
+	char* typeName = idNodeAsType->semantic_value.identifierSemanticValue.identifierName;
+	
+	if (!strcmp(typeName, "int")) {
+		idNodeAsType->dataType = INT_TYPE;
+	} else if (!strcmp(typeName, "float")) {
+		idNodeAsType->dataType = FLOAT_TYPE;
+	} else if (!strcmp(typeName, "void")) {
+		idNodeAsType->dataType = VOID_TYPE;
+	} else {
+		SymbolTableEntry* typeEntryRetrieved = retrieveSymbol(typeName);
+		if (typeEntryRetrieved == NULL) {
+			printErrorMsg(idNodeAsType, SYMBOL_UNDECLARED); //發現自定義的type不存在，所以噴錯
+		} else {
+			idNodeAsType->dataType = typeEntryRetrieved->attribute->attr.typeDescriptor->properties.dataType;
+		}
+	}
 }
 
 
@@ -197,17 +213,28 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 	AST_NODE* declareTypeNode = declarationNode->child;
 	AST_NODE* declareIdNode = declareTypeNode->rightSibling;
 
+	//get type name, typeName may be "int", "float", "AAA"
+	char* typeName = declareTypeNode->semantic_value.identifierSemanticValue.identifierName;
+	
 	SymbolAttribute* symbolAttr = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
 	switch (isVariableOrTypeAttribute) {
 		case(VARIABLE_ATTRIBUTE):
+			//int a, b, c;這類的declartion.
+			//A a, b, c;這類的declartion
 			symbolAttr->attributeKind = VARIABLE_ATTRIBUTE;
 			break;
 		case(TYPE_ATTRIBUTE):
+			//typedef int A B C[3];  這類的declaration.
+			//typedef void A B C;
 			symbolAttr->attributeKind = TYPE_ATTRIBUTE;
 			break;
 		default:
 			printf("Error: 未知的SymboalAttributeKind\n");
 	}
+
+	//確認type已經為int, float. void或是已經宣告過
+	processTypeNode(declareTypeNode);
+
 	symbolAttr->attr.typeDescriptor = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
 	while(declareIdNode != NULL){
 		switch (declareIdNode->semantic_value.identifierSemanticValue.kind) {
@@ -856,6 +883,7 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 	int currentDimensionIndex = 0;
 	int i;
 	float f;
+	typeDescriptor->properties.arrayProperties.dimension = 0;
 	while(idNodeChild != NULL) {
 		typeDescriptor->properties.arrayProperties.dimension += 1;
 		typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
@@ -876,9 +904,56 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 
 void declareFunction(AST_NODE* declarationNode)
 {
+	AST_NODE* returnTypeNode = declarationNode->child;
+	AST_NODE* funcNameNode = returnTypeNode->rightSibling;
+	AST_NODE* paraListNode = funcNameNode->rightSibling;
+	AST_NODE* blockNode = paraListNode->rightSibling;
+
+	//確認typeNode是否有宣告過
+	processTypeNode(returnType);	
+
 	// Declare function
-	SymbolAttribute attribute;
-	attribute.attributeKind = FUNCTION_SIGNATURE;
-	attribute.attr.functionSignature = ;
+	SymbolAttribute* attribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
+	attribute->attributeKind = FUNCTION_SIGNATURE;
+	attribute->attr.functionSignature = (FunctionSignature*)malloc(sizeof(FunctionSignature));
+	
+	//設定returnType
+	attribute.attr.functionSignature->returnType = returnTypeNode->dataType;
+	
+	//設定參數
+	AST_NODE* funcParaDeclNode = paraListNode->child;
+
+	attribute->attr.functionSignature->parameterList = NULL;
+	Parameter** param = &(attribute->attr.functionSignature->parameterList);
+
+	while(funcParaDeclNode!=NULL){
+		AST_NODE* paraTypeNode = funcParaDeclNode->child;
+		AST_NODE* paraIdNode = paraTypeNode->rightSibling;
+		
+		//先檢查type是否有宣告過
+		processTypeNode(paraTypeNode);
+
+		//之後根據參數進行設定.....
+		*param = (Parameter*)malloc(sizeof(Parameter));
+		*param->parameterName = paraIdNode->semantic_value.identifierSemanticValue.identifierName;
+		*param->type = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+		*param->next = NULL;
+		switch(paraIdNode->semantic_value.identifierSemanticValue.kind){
+			case NORMAL_ID:
+				*param->type->kind = SCALAR_TYPE_DESCRIPTOR;
+				*param->type->properties.dataType = paraTypeNode->dataType;
+				break;
+			case ARRAY_ID:
+				*param->type->kind = ARRAY_TYPE_DESCRIPTOR;
+				processDeclDimList(paraIdNode, *param->type, 0);
+				break;
+			default:
+				printf("Error: 宣告function的參數出現無法判斷的id kind");
+		}
+
+		param = &(param->next);
+		funcParaDeclNode = funcParaDeclNode->rightSibling;
+	}
+	
 	enterSymbol(function_name, attribute);
 }
