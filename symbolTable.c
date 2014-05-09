@@ -31,9 +31,9 @@ SymbolTableEntry* newSymbolTableEntry(int nestingLevel)
 
 void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
-	if(hashTable[hashIndex] == entry){
-		hashTable[hashIndex] = entry->nextInHashChain; 
-		hashTable[hashIndex]->prevInHashChain = NULL;
+	if(symbolTable.hashTable[hashIndex] == entry){
+		symbolTable.hashTable[hashIndex] = entry->nextInHashChain; 
+		symbolTable.hashTable[hashIndex]->prevInHashChain = NULL;
 	}
 	else{
 		entry->prevInHashChain->nextInHashChain = entry->nextInHashChain;
@@ -55,7 +55,7 @@ void initializeSymbolTable()
 	int counter = 0;
 	for(counter; counter < HASH_TABLE_SIZE; counter++)
 		symbolTable.hashTable[counter] = NULL;
-	symbolTable.scopeDisplay = (symbolTableEntry**)malloc(256 * sizeof(SymbolTableEntry*));
+	symbolTable.scopeDisplay = (SymbolTableEntry**)malloc(256 * sizeof(SymbolTableEntry*));
 	symbolTable.currentLevel = 0;
 	symbolTable.scopeDisplayElementCount = 0;
 }
@@ -70,7 +70,7 @@ SymbolTableEntry* retrieveSymbol(char* symbolName)
 	SymbolTableEntry* temp = symbolTable.hashTable[HASH(symbolName)];
 
 	while(temp != NULL){
-		if(strcmp(temp.name, symbolName))
+		if(strcmp(temp->name, symbolName))
 			temp = temp->nextInHashChain;
 		else 
 			return temp;
@@ -94,15 +94,15 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 		retr->prevInHashChain->nextInHashChain = temp;
 		temp->sameNameInOuterLevel = retr;
 	}
-	temp->nextInSameLevel = symbolTable.scopeDisplay[scopeDisplayElementCount];
-	symbolTable.scopeDisplay[scopeDisplayElementCount] = temp;
+	temp->nextInSameLevel = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount];
+	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount] = temp;
 	return temp;
 }
 
 //remove the symbol from the current scope
 void removeSymbol(char* symbolName)
 {
-	SymbolTableEntry* temp = retrieveSymbol(symbolTable);
+	SymbolTableEntry* temp = retrieveSymbol(symbolName);
 	if(temp == NULL)
 		return;
 	SymbolTableEntry* tempsame = temp->sameNameInOuterLevel;
@@ -126,7 +126,7 @@ void openScope()
 {
 	symbolTable.currentLevel++;
 	symbolTable.scopeDisplayElementCount++;
-	symbolTable.scopeDisplay[scopeDisplayElementCount] = NULL;
+	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount] = NULL;
 }
 
 void closeScope()

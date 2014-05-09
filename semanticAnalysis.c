@@ -63,6 +63,7 @@ typedef enum ErrorMsgKind
     PASS_SCALAR_TO_ARRAY  //*
 } ErrorMsgKind;
 
+extern SymbolTable symbolTable;
 void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKind)
 {
     g_anyErrorOccur = 1;
@@ -70,10 +71,10 @@ void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKin
     switch(errorMsgKind)
     {
 		case(PASS_ARRAY_TO_SCALAR):
-			printf("Array %s passed to scalar parameter %s.", node1->semantic_value.identifierSemanticValue.identifierName, name2);
+			printf("Array %s passed to scalar parameter %s.\n", node1->semantic_value.identifierSemanticValue.identifierName, name2);
 			break;
 		case(PASS_SCALAR_TO_ARRAY):
-			printf("Scalar %s passed to array parameter %s.", nore1->semantic_value.identifierSemanticValue.identifierName, name2);
+			printf("Scalar %s passed to array parameter %s.\n", node1->semantic_value.identifierSemanticValue.identifierName, name2);
 			break;
 		default:
 			printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
@@ -144,10 +145,12 @@ void processProgramNode(AST_NODE *programNode)
 				processDeclarationNode(programNodeChild);
 				break;
 			case (VARIABLE_DECL_LIST_NODE):
-				variableDeclListNodeChlid = programNodeChild->child->leftmostSibling;
-				while(variableDeclListNodeChlid != NULL) {
-					processDeclarationNode(variableDeclListNodeChlid);
-					variableDeclListNodeChlid = variableDeclListNodeChlid->rightSibling;	
+				{
+					AST_NODE* variableDeclListNodeChlid = programNodeChild->child->leftmostSibling;
+					while(variableDeclListNodeChlid != NULL) {
+						processDeclarationNode(variableDeclListNodeChlid);
+						variableDeclListNodeChlid = variableDeclListNodeChlid->rightSibling;	
+					}
 				}
 				break;
 			default:
@@ -170,7 +173,7 @@ void processDeclarationNode(AST_NODE* declarationNode)
 			break;
 		case(FUNCTION_DECL):
 			//Insert function signature entry to symboltable
-			break:
+			break;
 		case(FUNCTION_PARAMETER_DECL):
 			//parameter list (point to type descriptor in symboltable)
 			break;
@@ -240,7 +243,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		switch (declareIdNode->semantic_value.identifierSemanticValue.kind) {
 			case(NORMAL_ID):
 				symbolAttr->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
-				symbolAttr->attr.typeDescriptor->properties.dataType = declartionNode->leftmostSibling->dataType;
+				symbolAttr->attr.typeDescriptor->properties.dataType = declarationNode->leftmostSibling->dataType;
 				break;
 			case(ARRAY_ID):
 				processDeclDimList(declareIdNode, symbolAttr->attr.typeDescriptor, 0); //TODO: 我也不知道為什麼最後一個參數要填0
@@ -251,15 +254,15 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		
 		//接下來要插入Entry了
 		//先檢查有沒有同名的重複宣告
-		SymbolTableEntry* entryRetrieved = retrieveSymbol(declartionNode->semantic_value.identifierSemanticValue.identifierName);
-		char* declaredName = declartionNode->semantic_value.identifierSemanticValue.identifierName;
+		SymbolTableEntry* entryRetrieved = retrieveSymbol(declarationNode->semantic_value.identifierSemanticValue.identifierName);
+		char* declaredName = declarationNode->semantic_value.identifierSemanticValue.identifierName;
 		if (entryRetrieved == NULL) {
 			enterSymbol(declaredName, symbolAttr);
 		} else {
-			SymbolTableEntry* sameScopeEntry = SymbolTable.scopeDisplay[SymbolTable.scopeDisplayElementCount];
+			SymbolTableEntry* sameScopeEntry = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount];
 			while(sameScopeEntry != NULL) {
 				if (sameScopeEntry->name == declaredName) {
-					printErrorMsg(declartionNode, SYMBOL_REDECLARE);
+					printErrorMsg(declarationNode, SYMBOL_REDECLARE);
 					return;
 				}
 				sameScopeEntry = sameScopeEntry->nextInSameLevel;
@@ -310,10 +313,12 @@ void checkForStmt(AST_NODE* forNode)
 	AST_NODE* thirdPart = secondPart->rightSibling;
 	switch (firstPart->nodeType) {
 		case(NONEMPTY_ASSIGN_EXPR_LIST_NODE):
-			AST_NODE* firstPartChild = firstPart->child;
-			while(firstPartChild != NULL){
-				checkAssignmentStmt(firstPartChild);
-				firstPartChild = firstPartChild->rightSibling;
+			{
+				AST_NODE* firstPartChild = firstPart->child;
+				while(firstPartChild != NULL){
+					checkAssignmentStmt(firstPartChild);
+					firstPartChild = firstPartChild->rightSibling;
+				}
 			}
 			break;
 		case(NUL_NODE):
@@ -323,10 +328,12 @@ void checkForStmt(AST_NODE* forNode)
 	}
 	switch (secondPart->nodeType) {
 		case(NONEMPTY_RELOP_EXPR_LIST_NODE):
-			AST_NODE* secondPartChild = secondPart->child;
-			while(secondPartChild != NULL) {
-				processExprRelatedNode(secondPartChild); //TODO: 不確定對不對
-				secondPartChild = secondPartChild->rightSibling;
+			{
+				AST_NODE* secondPartChild = secondPart->child;
+				while(secondPartChild != NULL) {
+					processExprRelatedNode(secondPartChild); //TODO: 不確定對不對
+					secondPartChild = secondPartChild->rightSibling;
+				}
 			}
 			break;
 		case(NUL_NODE):
@@ -336,10 +343,12 @@ void checkForStmt(AST_NODE* forNode)
 	}
 	switch (thirdPart->nodeType) {
 		case(NONEMPTY_ASSIGN_EXPR_LIST_NODE):
-			AST_NODE* thirdPartChild = thirdPart->child;
-			while(thirdPartChild != NULL){
-				checkAssignmentStmt(thirdPartChild);
-				thirdPartChild = thirdPartChild->rightSibling;
+			{
+				AST_NODE* thirdPartChild = thirdPart->child;
+				while(thirdPartChild != NULL){
+					checkAssignmentStmt(thirdPartChild);
+					thirdPartChild = thirdPartChild->rightSibling;
+				}
 			}
 			break;
 		case(NUL_NODE):
@@ -386,7 +395,7 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 	//function_call_node -> function_name(id_node)
 	//              -> NUL_NODE or NONEMPTY_RELOP_EXPR_LIST_NODE
 	//檢查function name是否存在於symbol_table
-	functionNameNode = functionCallNode->child;
+	AST_NODE* functionNameNode = functionCallNode->child;
 	char* functionName = functionNameNode->semantic_value.identifierSemanticValue.identifierName;
 	SymbolTableEntry* entry = retrieveSymbol(functionName);
 	if ( entry == NULL) {
@@ -396,7 +405,7 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 		Parameter* para = entry->attribute->attr.functionSignature->parameterList;
 		AST_NODE* callParaListNode = functionNameNode->rightSibling;
 		AST_NODE* paraNode;
-		if (callParaListNode.nodeType == NUL_NODE) {
+		if (callParaListNode->nodeType == NUL_NODE) {
 			paraNode = NULL;
 		} else {
 			paraNode = callParaListNode->child;
@@ -441,7 +450,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
 							return;
 						}
-						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimensions;
+						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
 						int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
 						if (dimensionsOfActualPara != 0) {
 								//如果傳入的id的維度不是0, 代表不是scalar
@@ -469,7 +478,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 						}
 
 						//check array dimension
-						int expectedDimensions = formalParameter->type->properties.arrayProperties.dimensions;				
+						int expectedDimensions = formalParameter->type->properties.arrayProperties.dimension;				
 						int childNumberOfActualPara = 0;
 						AST_NODE* actualParaChild = actualParameter->child;
 						while(actualParaChild != NULL){
@@ -477,14 +486,14 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 							actualParaChild = actualParaChild->rightSibling;
 						}
 						
-						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimensions;
+						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
 						int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
 						if (dimensionsOfActualPara != expectedDimensions) {
 							if (dimensionsOfActualPara == 0) {
 								//如果傳入的id的維度是0, 代表是scalar
 								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_SCALAR_TO_ARRAY);
 							} else {
-								printErrorMsgSpecial(actualParameter, INCOMPATIBLE_ARRAY_DIMENSION);
+								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, INCOMPATIBLE_ARRAY_DIMENSION);
 							}
 						}
 					} else {
@@ -510,7 +519,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 		case EXPR_NODE:
 			switch (exprRelatedNode->semantic_value.exprSemanticValue.kind) {
 				case(BINARY_OPERATION):
-					switch(exprRelatedNode->semantic_value.op.binaryOp) {
+					switch(exprRelatedNode->semantic_value.exprSemanticValue.op.binaryOp) {
 						case BINARY_OP_AND:  
 						case BINARY_OP_OR:
 						case BINARY_OP_EQ:
@@ -519,30 +528,37 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 						case BINARY_OP_LT:
 						case BINARY_OP_LE:  
 						case BINARY_OP_NE:
-							AST_NODE* leftChild = exprRelatedNode->child;
-							AST_NODE* rightChild = leftChild->rightSibling;
-							processExprRelatedNode(leftChild);
-							processExprRelatedNode(rightChild);
+							{
+								AST_NODE* leftChild = exprRelatedNode->child;
+								AST_NODE* rightChild = leftChild->rightSibling;
+								processExprRelatedNode(leftChild);
+								processExprRelatedNode(rightChild);
+							}
 							break;
 						case BINARY_OP_ADD:
 						case BINARY_OP_SUB:
 						case BINARY_OP_MUL:
 						case BINARY_OP_DIV:
-							AST_NODE* leftChild = exprRelatedNode->child;
-							AST_NODE* rightChild = leftChild->rightSibling;
-							processExprNode(leftChild);
-							processExprNode(rightChild);
+							{
+								AST_NODE* leftChild = exprRelatedNode->child;
+								AST_NODE* rightChild = leftChild->rightSibling;
+								processExprNode(leftChild);
+								processExprNode(rightChild);
+							}
 							break;
 						default:
 							printf("Error: exprRelatedNodeChild type error\n");
 					}
 					break;
 				case(UNARY_OPERATION):
-					AST_NODE* child = exprRelatedNode->child;
-					processExprRelatedNode(child);
+					{
+						AST_NODE* child = exprRelatedNode->child;
+						processExprRelatedNode(child);
+					}
 					break;
 				default:
 					printf("Error: processRxprRelatedNode function出現無法判斷binary或unary的Expr Node");
+			}
 			break;
 		case IDENTIFIER_NODE:
 		case CONST_VALUE_NODE:
@@ -555,11 +571,11 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
-	switch (exprOrConstNode.nodeType) {
+	switch (exprOrConstNode->nodeType) {
 		case(EXPR_NODE):
 			switch (exprOrConstNode->semantic_value.exprSemanticValue.kind) {
 				case(BINARY_OPERATION):
-					switch(exprOrConstNode->semantic_value.op.binaryOp){
+					switch(exprOrConstNode->semantic_value.exprSemanticValue.op.binaryOp){
 						case BINARY_OP_AND:  
 						case BINARY_OP_OR:
 						case BINARY_OP_EQ:
@@ -575,29 +591,30 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 						case BINARY_OP_SUB:
 						case BINARY_OP_MUL:
 						case BINARY_OP_DIV:
-							AST_NODE* leftChild = exprOrConstNode->child;
-							AST_NODE* rightChild = leftChild->rightSibling;
-							getExprOrConstValue(leftChild, iValue, fValue);
-							if (*iValue == 1) {
-								getExprOrConstValue(rightSibling, iValue, fValue);
+							{
+								AST_NODE* leftChild = exprOrConstNode->child;
+								AST_NODE* rightChild = leftChild->rightSibling;
+								getExprOrConstValue(leftChild, iValue, fValue);
 								if (*iValue == 1) {
-									return;
+									getExprOrConstValue(rightChild, iValue, fValue);
+									if (*iValue == 1) {
+										return;
+									} else {
+										*iValue = 0;
+										*fValue = 1.0;
+									}
 								} else {
-									*iValue = 0;
-									*fValue = 1.0;
+									return;
 								}
-							} else {
-								return;
 							}
-
 							break;
 						default:
 							printf("Error: 出現無法預期的binary operator\n");
 					}
 					break;
 				case(UNARY_OPERATION):
-					getExprOrConstValue(exprOrConstNode->child, iValue, fvalue);
-					break:
+					getExprOrConstValue(exprOrConstNode->child, iValue, fValue);
+					break;
 				default:
 					printf("Error: getExprOrConstValue的expr node出現無法預期的op\n");
 			}
@@ -606,12 +623,12 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 		case(CONST_VALUE_NODE):
 			switch(exprOrConstNode->semantic_value.const1->const_type){
 				case(INTEGERC):
-					*ivalue = 1;
-					*fvalue = 0.0;
+					*iValue = 1;
+					*fValue = 0.0;
 					break;
 				case(FLOATC):
-					*ivalue = 0;
-					*fvalue = 1.0;
+					*iValue = 0;
+					*fValue = 1.0;
 					break;
 				case(STRINGC):
 					printf("Error: 請勿在expression中使用String Value");
@@ -637,23 +654,27 @@ void processExprNode(AST_NODE* exprNode)
 		case EXPR_NODE:
 			switch (exprNode->semantic_value.exprSemanticValue.kind) {
 				case(BINARY_OPERATION):
-					switch(exprRelatedNode->semantic_value.op.binaryOp) {
+					switch(exprNode->semantic_value.exprSemanticValue.op.binaryOp) {
 						case BINARY_OP_ADD:
 						case BINARY_OP_SUB:
 						case BINARY_OP_MUL:
 						case BINARY_OP_DIV:
-							AST_NODE* leftChild = exprRelatedNode->child;
-							AST_NODE* rightChild = leftChild->rightSibling;
-							processExprNode(leftChild);
-							processExprNode(rightChild);
+							{
+								AST_NODE* leftChild = exprNode->child;
+								AST_NODE* rightChild = leftChild->rightSibling;
+								processExprNode(leftChild);
+								processExprNode(rightChild);
+							}
 							break;
 						default:
 							printf("Error: 無法判斷的Binary Operation\n");
 					}
 					break;
 				case(UNARY_OPERATION):
-					AST_NODE* child = exprRelatedNode->child;
-					processExprNode(child);
+					{
+						AST_NODE* child = exprNode->child;
+						processExprNode(child);
+					}
 					break;
 				default:
 					printf("Error: exprRelatedNode type error\n");
@@ -689,18 +710,20 @@ void processVariableRValue(AST_NODE* idNode)
 	} else {
 		switch(idNode->semantic_value.identifierSemanticValue.kind){
 			case(ARRAY_ID):
-				int i;
-				float f;
-				AST_NODE* idNodeChild = idNode->child; 
-				while(idNodeChild != NULL){
-					i = -1;
-					f = -1.0;
-					getExprOrConstValue(idNodeChild, &i, &f);
-					if (i != 1) {
-						printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
+				{
+					int i;
+					float f;
+					AST_NODE* idNodeChild = idNode->child; 
+					while(idNodeChild != NULL){
+						i = -1;
+						f = -1.0;
+						getExprOrConstValue(idNodeChild, &i, &f);
+						if (i != 1) {
+							printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
+						}
+	
+						idNodeChild = idNodeChild->rightSibling;
 					}
-
-					idNodeChild = idNodeChild->rightSibling;
 				}
 				break;
 			case(NORMAL_ID):
@@ -732,7 +755,7 @@ void processConstValueNode(AST_NODE* constValueNode)
 
 void checkReturnStmt(AST_NODE* returnNode)
 {
-	AST_NODE* returnNodeChild = returnNode->chlid;
+	AST_NODE* returnNodeChild = returnNode->child;
 	AST_NODE* returnNodeParent = returnNode->parent;
 	while(returnNodeParent->semantic_value.declSemanticValue.kind != FUNCTION_DECL){
 		returnNodeParent = returnNodeParent->parent;
@@ -785,26 +808,28 @@ void processBlockNode(AST_NODE* blockNode)
 				//TODO, call function to handle variable_decl_list_node				
 				break;
 			case(STMT_LIST_NODE):
-				AST_NODE* stmtListNodeChild = blockNodeChild->child->leftmostSibling;
-				while(stmtListNodeChild != NULL) {
-					switch(stmtListNodeChild->nodeType){
-						case STMT_NODE:
-							processStmtNode(stmtListNodeChild);
-							break;
-						case BLOCK_NODE:
-							processBlockNode(stmtListNodeChild);
-							break;
-						case NUL_NODE:   
-							//空述句
-							break;
-						default:
-							printf("Error: 無法判斷的STMT_LIST_NODE之子節點")	
+				{
+					AST_NODE* stmtListNodeChild = blockNodeChild->child->leftmostSibling;
+					while(stmtListNodeChild != NULL) {
+						switch(stmtListNodeChild->nodeType){
+							case STMT_NODE:
+								processStmtNode(stmtListNodeChild);
+								break;
+							case BLOCK_NODE:
+								processBlockNode(stmtListNodeChild);
+								break;
+							case NUL_NODE:   
+								//空述句
+								break;
+							default:
+								printf("Error: 無法判斷的STMT_LIST_NODE之子節點\n");	
+						}
+						stmtListNodeChild = stmtListNodeChild->rightSibling;
 					}
-					stmtListNodeChild = stmtListNodeChild->rightSibling;
 				}
 				break;
 			default:
-				printf("Error: 無法判斷的blockNode之子節點")
+				printf("Error: 無法判斷的blockNode之子節點\n");
 		}
 		//換到右邊的sibling繼續處理
 		blockNodeChild = blockNodeChild->rightSibling;
@@ -878,6 +903,7 @@ void processGeneralNode(AST_NODE *node)
 void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize)
 {
 	//該function負責專心專注於
+	SymbolAttribute* symbolAttr;
 	symbolAttr->attr.typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
 	AST_NODE* idNodeChild = idNode->child;
 	int currentDimensionIndex = 0;
@@ -890,12 +916,12 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 		i = -1;
 		f = -1.0;
 		//判斷a[expr] 中的expr是否會回傳int
-		getExprOrConstValue(declNodeChild, &i, &f);
+		getExprOrConstValue(idNodeChild, &i, &f);
 		if (i != 1) {
 			printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
 		}
 
-		declNodechild = declNodechild->rightSibling;
+		idNodeChild = idNodeChild->rightSibling;
 		currentDimensionIndex += 1;
 	}
 	typeDescriptor->properties.arrayProperties.elementType = idNode->leftmostSibling->dataType;
@@ -910,7 +936,7 @@ void declareFunction(AST_NODE* declarationNode)
 	AST_NODE* blockNode = paraListNode->rightSibling;
 
 	//確認typeNode是否有宣告過
-	processTypeNode(returnType);	
+	processTypeNode(returnTypeNode);	
 
 	// Declare function
 	SymbolAttribute* attribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
@@ -918,7 +944,7 @@ void declareFunction(AST_NODE* declarationNode)
 	attribute->attr.functionSignature = (FunctionSignature*)malloc(sizeof(FunctionSignature));
 	
 	//設定returnType
-	attribute.attr.functionSignature->returnType = returnTypeNode->dataType;
+	attribute->attr.functionSignature->returnType = returnTypeNode->dataType;
 	
 	//設定參數
 	AST_NODE* funcParaDeclNode = paraListNode->child;
@@ -935,25 +961,25 @@ void declareFunction(AST_NODE* declarationNode)
 
 		//之後根據參數進行設定.....
 		*param = (Parameter*)malloc(sizeof(Parameter));
-		*param->parameterName = paraIdNode->semantic_value.identifierSemanticValue.identifierName;
-		*param->type = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
-		*param->next = NULL;
+		(*param)->parameterName = paraIdNode->semantic_value.identifierSemanticValue.identifierName;
+		(*param)->type = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+		(*param)->next = NULL;
 		switch(paraIdNode->semantic_value.identifierSemanticValue.kind){
 			case NORMAL_ID:
-				*param->type->kind = SCALAR_TYPE_DESCRIPTOR;
-				*param->type->properties.dataType = paraTypeNode->dataType;
+				(*param)->type->kind = SCALAR_TYPE_DESCRIPTOR;
+				(*param)->type->properties.dataType = paraTypeNode->dataType;
 				break;
 			case ARRAY_ID:
-				*param->type->kind = ARRAY_TYPE_DESCRIPTOR;
-				processDeclDimList(paraIdNode, *param->type, 0);
+				(*param)->type->kind = ARRAY_TYPE_DESCRIPTOR;
+				processDeclDimList(paraIdNode, (*param)->type, 0);
 				break;
 			default:
 				printf("Error: 宣告function的參數出現無法判斷的id kind");
 		}
 
-		param = &(param->next);
+		param = &((*param)->next);
 		funcParaDeclNode = funcParaDeclNode->rightSibling;
 	}
 	
-	enterSymbol(function_name, attribute);
+	enterSymbol(funcNameNode->semantic_value.identifierSemanticValue.identifierName, attribute);
 }
