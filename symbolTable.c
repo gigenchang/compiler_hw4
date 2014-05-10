@@ -56,6 +56,7 @@ void initializeSymbolTable()
 	for(counter; counter < HASH_TABLE_SIZE; counter++)
 		symbolTable.hashTable[counter] = NULL;
 	symbolTable.scopeDisplay = (SymbolTableEntry**)malloc(256 * sizeof(SymbolTableEntry*));
+	*symbolTable.scopeDisplay = NULL;
 	symbolTable.currentLevel = 0;
 	symbolTable.scopeDisplayElementCount = 1;
 }
@@ -94,8 +95,8 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 		retr->prevInHashChain->nextInHashChain = temp;
 		temp->sameNameInOuterLevel = retr;
 	}
-	temp->nextInSameLevel = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount];
-	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount] = temp;
+	temp->nextInSameLevel = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1];
+	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1] = temp;
 	return temp;
 }
 
@@ -126,7 +127,7 @@ void openScope()
 {
 	symbolTable.currentLevel++;
 	symbolTable.scopeDisplayElementCount++;
-	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount] = NULL;
+	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1] = NULL;
 }
 
 void closeScope()
