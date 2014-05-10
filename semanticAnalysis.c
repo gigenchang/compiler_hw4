@@ -211,9 +211,11 @@ void processTypeNode(AST_NODE* idNodeAsType)
 {
 	printf("[In processTypeNode]\n");
 	printSymbolTable();
+	printf("GG");
 	//負責檢查該Type(其實是一個Id node)是否有宣告過，如果沒有的話噴錯
 	//如果是int, float, void或是有宣告過的話，那就幫他設定DataType
 	char* typeName = idNodeAsType->semantic_value.identifierSemanticValue.identifierName;
+	printf("typeName:%s", typeName);
 	
 	if (!strcmp(typeName, "int")) {
 		idNodeAsType->dataType = INT_TYPE;
@@ -985,7 +987,15 @@ void declareFunction(AST_NODE* declarationNode)
 
 	//確認typeNode是否有宣告過
 	processTypeNode(returnTypeNode);	
-	// TODO funcNameNode redefined check
+	
+	//funcNameNode redefined check
+	char* funcName = funcNameNode->semantic_value.identifierSemanticValue.identifierName;
+ 	SymbolTableEntry* entryRetrieved = retrieveSymbol(funcName);
+	if (entryRetrieved != NULL) {
+		printErrorMsg(funcNameNode, SYMBOL_REDECLARE);
+	}
+
+
 	// Declare function
 	SymbolAttribute* attribute = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
 	attribute->attributeKind = FUNCTION_SIGNATURE;
@@ -1029,5 +1039,8 @@ void declareFunction(AST_NODE* declarationNode)
 		funcParaDeclNode = funcParaDeclNode->rightSibling;
 	}
 	
-	enterSymbol(funcNameNode->semantic_value.identifierSemanticValue.identifierName, attribute);
+	//處理block區塊
+	processBlockNode(blockNode);
+
+	enterSymbol(funcName, attribute);
 }
