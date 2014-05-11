@@ -84,6 +84,57 @@ void printSymbolTable()
 	}
 }
 
+void printASTNodeInfo(AST_NODE* node) {
+	printf("AST_Node:\n");
+	if (node == NULL) {
+		printf("This node is NULL\n");
+	} else {
+		printf("nodeType:");
+		switch(node->nodeType) {
+			case PROGRAM_NODE:
+				 printf("PROGRAM_NODE");
+				 break;
+			case DECLARATION_NODE:
+				 printf("DECLARATION_NODE");
+				 break;
+			case IDENTIFIER_NODE:
+				 printf("IDENTIFIER_NODE");
+				 break;
+			case PARAM_LIST_NODE:
+				 printf("PARAM_LIST_NODE");
+				 break;
+			case NUL_NODE:
+				 printf("NUL_NODE");
+				 break;
+			case BLOCK_NODE:
+				 printf("BLOCK_NODE");
+				 break;
+			case VARIABLE_DECL_LIST_NODE:
+				 printf("VARIABLE_DECL_LIST_NODE");
+				 break;
+			case STMT_LIST_NODE:
+				 printf("STMT_LIST_NODE");
+				 break;
+			case STMT_NODE:
+				 printf("STMT_NODE");
+				 break;
+			case EXPR_NODE:
+				 printf("EXPR_NODE");
+				 break;
+			case CONST_VALUE_NODE:
+				 printf("CONST_VALUE_NODE");
+				 break;
+			case NONEMPTY_ASSIGN_EXPR_LIST_NODE:
+				 printf("PROGRAM_NODE");
+				 break;
+			case NONEMPTY_RELOP_EXPR_LIST_NODE:
+				 printf("PROGRAM_NODE");
+				 break;
+		}
+		printf("\n");
+	}
+}
+
 void printErrorMsgSpecial(AST_NODE* node1, char* name2, ErrorMsgKind errorMsgKind)
 {
     g_anyErrorOccur = 1;
@@ -160,7 +211,7 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 void processProgramNode(AST_NODE *programNode)
 {
 	printf("[In processProgramNode]\n");
-	AST_NODE* programNodeChild = programNode->child->leftmostSibling;
+	AST_NODE* programNodeChild = programNode->child;
 
 	while(programNodeChild != NULL) {
 		switch(programNodeChild->nodeType) {
@@ -169,7 +220,7 @@ void processProgramNode(AST_NODE *programNode)
 				break;
 			case (VARIABLE_DECL_LIST_NODE):
 				{
-					AST_NODE* variableDeclListNodeChlid = programNodeChild->child->leftmostSibling;
+					AST_NODE* variableDeclListNodeChlid = programNodeChild->child;
 					while(variableDeclListNodeChlid != NULL) {
 						processDeclarationNode(variableDeclListNodeChlid);
 						variableDeclListNodeChlid = variableDeclListNodeChlid->rightSibling;	
@@ -320,13 +371,17 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 	}
 }
 
+
 void checkWhileStmt(AST_NODE* whileNode)
 {
 	printf("[In checkWhileStmt]\n");
+	printASTNodeInfo(whileNode);
 	//deal with type WHILE_STMT as a stmt node
 	//call the children of whileNode(processStmtNode and all processExprRelatedNode)
-	AST_NODE* testNode = whileNode->child->leftmostSibling;
+	AST_NODE* testNode = whileNode->child;
+	printf("II\n");
 	AST_NODE* stmtNode = testNode->rightSibling;
+	printf("GG\n");
 	checkAssignOrExpr(testNode);
 	processStmtNode(stmtNode);
 }
@@ -340,9 +395,10 @@ void checkForStmt(AST_NODE* forNode)
 	//including some checkAssignmentStmt 
 	//along with NORMAL_ID check if necessary
 	//and all processExprRelatedNode
-	AST_NODE* firstPart = forNode->child->leftmostSibling;
+	AST_NODE* firstPart = forNode->child;
 	AST_NODE* secondPart = firstPart->rightSibling;
 	AST_NODE* thirdPart = secondPart->rightSibling;
+	AST_NODE* blockPart = thirdPart->rightSibling;
 	switch (firstPart->nodeType) {
 		case(NONEMPTY_ASSIGN_EXPR_LIST_NODE):
 			{
@@ -388,6 +444,7 @@ void checkForStmt(AST_NODE* forNode)
 		default:
 			printf("Error: forNode part3部份出現無預期的節點");
 	}
+	processBlockNode(blockPart);
 }
 
 
@@ -416,12 +473,48 @@ void checkIfStmt(AST_NODE* ifNode)
 	//call the children same as while statement
 	AST_NODE* testNode = ifNode->child;
 	AST_NODE* stmtNode = testNode->rightSibling;
+	AST_NODE* elseIfNode = stmtNode->rightSibling;
 	checkAssignOrExpr(testNode);
 	processStmtNode(stmtNode);
+	switch(elseIfNode->nodeType) {
+		case NUL_NODE:
+			//沒有else if
+			break;
+		case STMT_NODE:
+			//else if stm
+			checkIfStmt(elseIfNode);
+			break;
+		case BLOCK_NODE:
+			processBlockNode(elseIfNode);
+			break;
+		default:
+			printf("Error:無法identify的else if Node type\n");
+	}
+	
 }
 
 void checkWriteFunction(AST_NODE* functionCallNode)
 {
+	printf("[In checkWriteFunction]\n");
+	AST_NODE* functionNameNode = functionCallNode->child;
+	AST_NODE* callParaListNode = functionNameNode->rightSibling;
+	AST_NODE* paraNode;
+	if (callParaListNode->nodeType == NUL_NODE) {
+		paraNode = NULL;
+	} else {
+		paraNode = callParaListNode->child;
+	}
+
+	if (paraNode == NULL) {
+		printErrorMsg(functionNameNode, TOO_FEW_ARGUMENTS);
+	} else if (paraNode->rightSibling != NULL) {
+		printErrorMsg(functionNameNode, TOO_MANY_ARGUMENTS);
+	} else if (paraNode->nodeType != CONST_VALUE_NODE) {
+		printErrorMsg(functionNameNode, PARAMETER_TYPE_UNMATCH);
+	} else if (paraNode->semantic_value.const1->const_type != STRINGC) {
+		printErrorMsg(functionNameNode, PARAMETER_TYPE_UNMATCH);
+	}
+
 }
 
 void checkFunctionCall(AST_NODE* functionCallNode)
@@ -432,34 +525,37 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 	//檢查function name是否存在於symbol_table
 	AST_NODE* functionNameNode = functionCallNode->child;
 	char* functionName = functionNameNode->semantic_value.identifierSemanticValue.identifierName;
-	SymbolTableEntry* entry = retrieveSymbol(functionName);
-	if ( entry == NULL) {
-		printErrorMsg(functionNameNode, SYMBOL_UNDECLARED);
+	if (!strcmp(functionName, "write")) {
+		checkWriteFunction(functionCallNode);	
 	} else {
-		//檢查function參數, 檢查數量是否符合, type是否match, scalar和array的問題
-		Parameter* para = entry->attribute->attr.functionSignature->parameterList;
-		AST_NODE* callParaListNode = functionNameNode->rightSibling;
-		AST_NODE* paraNode;
-		if (callParaListNode->nodeType == NUL_NODE) {
-			paraNode = NULL;
+		SymbolTableEntry* entry = retrieveSymbol(functionName);
+		if ( entry == NULL) {
+			printErrorMsg(functionNameNode, SYMBOL_UNDECLARED);
 		} else {
-			paraNode = callParaListNode->child;
+			//檢查function參數, 檢查數量是否符合, type是否match, scalar和array的問題
+			Parameter* para = entry->attribute->attr.functionSignature->parameterList;
+			AST_NODE* callParaListNode = functionNameNode->rightSibling;
+			AST_NODE* paraNode;
+			if (callParaListNode->nodeType == NUL_NODE) {
+				paraNode = NULL;
+			} else {
+				paraNode = callParaListNode->child;
+			}
+			
+			while(para != NULL && paraNode != NULL) {
+				checkParameterPassing(para, paraNode);
+
+				para = para->next;
+				paraNode = paraNode->rightSibling;
+			}
+
+			if (para == NULL && paraNode != NULL) {
+				printErrorMsg(functionNameNode, TOO_MANY_ARGUMENTS);
+			} else if (para != NULL && paraNode == NULL) {
+				printErrorMsg(functionNameNode, TOO_FEW_ARGUMENTS);
+			}
+
 		}
-		
-		while(para != NULL && paraNode != NULL) {
-			checkParameterPassing(para, paraNode);
-
-			para = para->next;
-			paraNode = paraNode->rightSibling;
-		}
-
-		if (para == NULL && paraNode != NULL) {
-			printErrorMsg(functionNameNode, TOO_MANY_ARGUMENTS);
-		} else if (para != NULL && paraNode == NULL) {
-			printErrorMsg(functionNameNode, TOO_FEW_ARGUMENTS);
-		}
-
-
 	}
 }
 
@@ -839,13 +935,15 @@ void checkReturnStmt(AST_NODE* returnNode)
 void processBlockNode(AST_NODE* blockNode)
 {
 	printf("[In processBlockNode]\n");
+	
 	//處理
 	//可能有decl_list node 和 stmt_list node
 	//stmt_list_node
 	//發現底下有stmt_list node，就依序call processStmtNode()
 	//發現底下有decl_list node，就依序call
 	openScope(); 
-	AST_NODE* blockNodeChild = blockNode->child->leftmostSibling;
+	AST_NODE* blockNodeChild = blockNode->child;
+	printASTNodeInfo(blockNodeChild);
 	while(blockNodeChild != NULL) {
 		//處理該child
 		switch(blockNodeChild->nodeType) {
@@ -854,7 +952,7 @@ void processBlockNode(AST_NODE* blockNode)
 				break;
 			case(STMT_LIST_NODE):
 				{
-					AST_NODE* stmtListNodeChild = blockNodeChild->child->leftmostSibling;
+					AST_NODE* stmtListNodeChild = blockNodeChild->child;
 					while(stmtListNodeChild != NULL) {
 						switch(stmtListNodeChild->nodeType){
 							case STMT_NODE:
@@ -886,32 +984,36 @@ void processBlockNode(AST_NODE* blockNode)
 void processStmtNode(AST_NODE* stmtNode)
 {
 	printf("[In processStmtNode]\n");
+	printASTNodeInfo(stmtNode);
 	//看是哪種stmt node
 	//while/for/assign_stmt/if_stmt/function_call_stmt/return_stmt
-	switch (stmtNode->semantic_value.stmtSemanticValue.kind) {
-		case WHILE_STMT:
-			checkWhileStmt(stmtNode);
-			break;
-		case FOR_STMT:
-			checkForStmt(stmtNode);
-			break;
-		case ASSIGN_STMT:
-			checkAssignmentStmt(stmtNode);
-			break;
-		case IF_STMT:
-			checkIfStmt(stmtNode);
-			break;
-		case FUNCTION_CALL_STMT:
-			checkFunctionCall(stmtNode);
-			break;
-		case RETURN_STMT:
-			checkReturnStmt(stmtNode);
-			break;
-		default:
-			//This should not happen;
-			printf("Error: processStmtNode 出現無法判斷的Stmt");
+	if (stmtNode->nodeType == BLOCK_NODE) {
+		processBlockNode(stmtNode);
+	} else {
+		switch (stmtNode->semantic_value.stmtSemanticValue.kind) {
+			case WHILE_STMT:
+				checkWhileStmt(stmtNode);
+				break;
+			case FOR_STMT:
+				checkForStmt(stmtNode);
+				break;
+			case ASSIGN_STMT:
+				checkAssignmentStmt(stmtNode);
+				break;
+			case IF_STMT:
+				checkIfStmt(stmtNode);
+				break;
+			case FUNCTION_CALL_STMT:
+				checkFunctionCall(stmtNode);
+				break;
+			case RETURN_STMT:
+				checkReturnStmt(stmtNode);
+				break;
+			default:
+				//This should not happen;
+				printf("Error: processStmtNode 出現無法判斷的Stmt");
+		}
 	}
-	
 }
 
 
