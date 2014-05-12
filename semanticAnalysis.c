@@ -1068,13 +1068,13 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 {
 	printf("[In processDeclDimList]\n");
 	//該function負責專心專注於
-	SymbolAttribute* symbolAttr;
-	symbolAttr->attr.typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
+	typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
 	AST_NODE* idNodeChild = idNode->child;
 	int currentDimensionIndex = 0;
 	int i;
 	float f;
 	typeDescriptor->properties.arrayProperties.dimension = 0;
+	printf("3333333\n");
 	while(idNodeChild != NULL) {
 		typeDescriptor->properties.arrayProperties.dimension += 1;
 		typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
