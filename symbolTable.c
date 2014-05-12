@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 // This file is for reference only, you are not required to follow the implementation. //
-
+//
 int HASH(char * str) {
 	int idx=0;
 	while (*str){
@@ -46,7 +46,9 @@ void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 void enterIntoHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
 	entry->nextInHashChain = symbolTable.hashTable[hashIndex];
-	symbolTable.hashTable[hashIndex]->prevInHashChain = entry;
+	if (symbolTable.hashTable[hashIndex] != NULL) {
+		symbolTable.hashTable[hashIndex]->prevInHashChain = entry;
+	}
 	symbolTable.hashTable[hashIndex] = entry;
 }
 

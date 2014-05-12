@@ -217,6 +217,7 @@ void processProgramNode(AST_NODE *programNode)
 		switch(programNodeChild->nodeType) {
 			case (DECLARATION_NODE):  //for function declaration node
 				processDeclarationNode(programNodeChild);
+				printf("after handling declaration node\n");
 				break;
 			case (VARIABLE_DECL_LIST_NODE):
 				{
@@ -232,6 +233,7 @@ void processProgramNode(AST_NODE *programNode)
 		}
 		programNodeChild = programNodeChild->rightSibling;
 	}
+	printf("End processProgramNode\n");
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
