@@ -73,7 +73,7 @@ void printSymbolTable()
 	printf("scope Display: \n");
 	int elementCount = 0;
 	while(elementCount < symbolTable.scopeDisplayElementCount){
-		SymbolTableEntry* STEpointer = *(symbolTable.scopeDisplay + elementCount);
+		SymbolTableEntry* STEpointer = symbolTable.scopeDisplay[elementCount];
 		printf("Element Count: %d\n", elementCount);
 		while(STEpointer != NULL){
 			printf("(%s, %d)-> ", STEpointer->name, STEpointer->nestingLevel);
@@ -263,12 +263,10 @@ void processDeclarationNode(AST_NODE* declarationNode)
 void processTypeNode(AST_NODE* idNodeAsType)
 {
 	printf("[In processTypeNode]\n");
-	printSymbolTable();
-	printf("GG");
 	//負責檢查該Type(其實是一個Id node)是否有宣告過，如果沒有的話噴錯
 	//如果是int, float, void或是有宣告過的話，那就幫他設定DataType
 	char* typeName = idNodeAsType->semantic_value.identifierSemanticValue.identifierName;
-	printf("typeName:%s", typeName);
+	printf("typeName:%s\n", typeName);
 	
 	if (!strcmp(typeName, "int")) {
 		idNodeAsType->dataType = INT_TYPE;
@@ -300,7 +298,6 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 
 	//get type name, typeName may be "int", "float", "AAA"
 	char* typeName = declareTypeNode->semantic_value.identifierSemanticValue.identifierName;
-	
 	SymbolAttribute* symbolAttr = (SymbolAttribute*)malloc(sizeof(SymbolAttribute));
 	switch (isVariableOrTypeAttribute) {
 		case(VARIABLE_ATTRIBUTE):
@@ -330,16 +327,22 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 			case(ARRAY_ID):
 				processDeclDimList(declareIdNode, symbolAttr->attr.typeDescriptor, 0); //TODO: 我也不知道為什麼最後一個參數要填0
 				break;
+			case(WITH_INIT_ID):
+				symbolAttr->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
+				symbolAttr->attr.typeDescriptor->properties.dataType = declarationNode->leftmostSibling->dataType;
+				processExprRelatedNode(declareIdNode->child);
+				break;
 			default:
 				printf("Error: 無法判斷的declartionNode semantic type\n");
 		} 
 		
 		//接下來要插入Entry了
 		//先檢查有沒有同名的重複宣告
-		SymbolTableEntry* entryRetrieved = retrieveSymbol(declarationNode->semantic_value.identifierSemanticValue.identifierName);
-		char* declaredName = declarationNode->semantic_value.identifierSemanticValue.identifierName;
+		SymbolTableEntry* entryRetrieved = retrieveSymbol(declareIdNode->semantic_value.identifierSemanticValue.identifierName);
+		char* declaredName = declareIdNode->semantic_value.identifierSemanticValue.identifierName;
 		if (entryRetrieved == NULL) {
 			enterSymbol(declaredName, symbolAttr);
+			printSymbolTable();
 		} else {
 			SymbolTableEntry* sameScopeEntry = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount];
 			while(sameScopeEntry != NULL) {
@@ -350,6 +353,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 				sameScopeEntry = sameScopeEntry->nextInSameLevel;
 			}
 			enterSymbol(declaredName, symbolAttr);
+			printSymbolTable();
 		}
 
 		//處理下一個ID node
@@ -951,6 +955,13 @@ void processBlockNode(AST_NODE* blockNode)
 		switch(blockNodeChild->nodeType) {
 			case(VARIABLE_DECL_LIST_NODE):
 				//TODO, call function to handle variable_decl_list_node				
+				{
+					AST_NODE* variableDeclListNodeChlid = blockNodeChild->child;
+					while(variableDeclListNodeChlid != NULL) {
+						processDeclarationNode(variableDeclListNodeChlid);
+						variableDeclListNodeChlid = variableDeclListNodeChlid->rightSibling;	
+					}
+				}
 				break;
 			case(STMT_LIST_NODE):
 				{
@@ -1144,7 +1155,8 @@ void declareFunction(AST_NODE* declarationNode)
 	}
 	
 	//處理block區塊
+	enterSymbol(funcName, attribute);
 	processBlockNode(blockNode);
 
-	enterSymbol(funcName, attribute);
+	printSymbolTable();
 }
