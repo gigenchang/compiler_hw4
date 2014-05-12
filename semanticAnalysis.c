@@ -64,6 +64,7 @@ typedef enum ErrorMsgKind
 } ErrorMsgKind;
 
 extern SymbolTable symbolTable;
+extern int currentScopeDisplay;
 
 void printSymbolTable()
 {

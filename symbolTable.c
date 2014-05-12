@@ -15,6 +15,7 @@ int HASH(char * str) {
 }
 
 SymbolTable symbolTable;
+int currentScopeDisplay = 0;
 
 SymbolTableEntry* newSymbolTableEntry(int nestingLevel)
 {
@@ -65,7 +66,12 @@ void initializeSymbolTable()
 
 void symbolTableEnd()
 {
-	//TODO: what does this function do?
+	// Add an entry at the head with NULL string upon closing scope
+	// This is used for level check 
+	SymbolTableEntry* temp = newSymbolTableEntry(symbolTable.currentLevel);
+	temp->name = "";
+	temp->nextInSameLevel = symbolTable.scopeDisplay[currentScopeDisplay];
+	symbolTable.scopeDisplay[currentScopeDisplay] = temp;
 }
 
 SymbolTableEntry* retrieveSymbol(char* symbolName)
@@ -97,8 +103,8 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 		retr->prevInHashChain->nextInHashChain = temp;
 		temp->sameNameInOuterLevel = retr;
 	}
-	temp->nextInSameLevel = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1];
-	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1] = temp;
+	temp->nextInSameLevel = symbolTable.scopeDisplay[currentScopeDisplay];
+	symbolTable.scopeDisplay[currentScopeDisplay] = temp;
 	return temp;
 }
 
@@ -128,11 +134,15 @@ int declaredLocally(char* symbolName)
 void openScope()
 {
 	symbolTable.currentLevel++;
+	currentScopeDisplay = symbolTable.scopeDisplayElementCount;
 	symbolTable.scopeDisplayElementCount++;
 	symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1] = NULL;
 }
 
 void closeScope()
 {
+	symbolTableEnd();
 	symbolTable.currentLevel--;
+	while(currentScopeDisplay > 0 && symbolTable.scopeDisplay[currentScopeDisplay]->nestingLevel > symbolTable.currentLevel)
+		currentScopeDisplay--;
 }
