@@ -696,15 +696,22 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 					}
 					break;
 				default:
-					printf("Error: processRxprRelatedNode function出現無法判斷binary或unary的Expr Node");
+					printf("Error: processRxprRelatedNode function出現無法判斷binary或unary的Expr Node\n");
 			}
 			break;
 		case IDENTIFIER_NODE:
 		case CONST_VALUE_NODE:
 			processExprNode(exprRelatedNode);
 			break;
+		case STMT_NODE:
+			if (exprRelatedNode->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT) {
+				checkFunctionCall(exprRelatedNode);
+			} else {
+				printf("Error: 無法判斷的ExprRelatedNode STMT Type\n");
+			}
+			break;
 		default:
-			printf("Error: 無法判斷的ExprRelatedNode Type");
+			printf("Error: 無法判斷的ExprRelatedNode Type\n");
 	}
 }
 
@@ -735,7 +742,7 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 								AST_NODE* leftChild = exprOrConstNode->child;
 								AST_NODE* rightChild = leftChild->rightSibling;
 								getExprOrConstValue(leftChild, iValue, fValue);
-								if (*iValue == 1) {
+								if (*iValue == 1) {  //代表是iValue, 要檢查另一邊是不是float
 									getExprOrConstValue(rightChild, iValue, fValue);
 									if (*iValue == 1) {
 										return;
@@ -743,7 +750,7 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 										*iValue = 0;
 										*fValue = 1.0;
 									}
-								} else {
+								} else {            //代表是float, 可以直接return
 									return;
 								}
 							}
@@ -776,6 +783,16 @@ void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 				default:
 					printf("Error: unknown const_value_node const type");
 			} 
+			break;
+		case(IDENTIFIER_NODE):
+			//for id
+			//應該要在processExpr中處理好判斷型別的問題，這裡直接看dataType
+			//TODO
+
+			break;
+		case(STMT_NODE):
+			//for function call
+			//TODO!!!!!!!!!!!!!!!
 			break;
 		default:
 			printf("Error: exprOrConstNode type error\n");
@@ -827,6 +844,13 @@ void processExprNode(AST_NODE* exprNode)
 		case IDENTIFIER_NODE:
 			processVariableRValue(exprNode);
 			break;
+		case STMT_NODE:
+			if (exprNode->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT) {
+				checkFunctionCall(exprNode);
+			} else {
+				printf("Error: 無法判斷的ExprRelatedNode STMT Type\n");
+			}
+			break;
 		default:
 		   printf("Error: 出現無法判斷的ExprNode的type\n");
 	}
@@ -868,8 +892,10 @@ void processVariableRValue(AST_NODE* idNode)
 						idNodeChild = idNodeChild->rightSibling;
 					}
 				}
-				break;
+				//TODO 幫array type的AST_NODE加上dataType, 可能是INT, FLOAT或是PTR(但是PTR不知道要怎麼處理)
 			case(NORMAL_ID):
+				//假設會搜尋到id node entry, 所以幫AST tree根據symboltable填上datatype
+				idNode->dataType = entryRetrieved->attribute->attr.typeDescriptor->properties.dataType;
 				break;
 			default:
 				printf("Error:遇到無法判斷的RValue的id 的id kind(array or scalar)\n");
@@ -1073,7 +1099,6 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 	int i;
 	float f;
 	typeDescriptor->properties.arrayProperties.dimension = 0;
-	printf("3333333\n");
 	while(idNodeChild != NULL) {
 		typeDescriptor->properties.arrayProperties.dimension += 1;
 		typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
