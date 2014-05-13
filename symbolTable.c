@@ -47,6 +47,7 @@ void removeFromHashTrain(int hashIndex, SymbolTableEntry* entry)
 void enterIntoHashTrain(int hashIndex, SymbolTableEntry* entry)
 {
 	entry->nextInHashChain = symbolTable.hashTable[hashIndex];
+	entry->prevInHashChain = NULL;
 	if (symbolTable.hashTable[hashIndex] != NULL) {
 		symbolTable.hashTable[hashIndex]->prevInHashChain = entry;
 	}
@@ -97,10 +98,13 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 		enterIntoHashTrain(HASH(symbolName), temp);
 	}
 	else{ 
-		temp->nextInHashChain = retr->nextInHashChain;
+		/*temp->nextInHashChain = retr->nextInHashChain;
 		temp->prevInHashChain = retr->prevInHashChain;
 		retr->nextInHashChain->prevInHashChain = temp;
-		retr->prevInHashChain->nextInHashChain = temp;
+		retr->prevInHashChain->nextInHashChain = temp;*/
+		temp->nextInHashChain = retr;
+		temp->prevInHashChain = NULL; //因為是插到hash chain最前面, 所以prev是null
+		retr->prevInHashChain = temp; 
 		temp->sameNameInOuterLevel = retr;
 	}
 	temp->nextInSameLevel = symbolTable.scopeDisplay[currentScopeDisplay];

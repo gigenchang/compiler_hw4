@@ -164,25 +164,25 @@ void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
     switch(errorMsgKind)
     {
 		case(SYMBOL_UNDECLARED):
-			printf("ID %s undeclared.", node->semantic_value.identifierSemanticValue.identifierName);
+			printf("ID %s undeclared.\n", node->semantic_value.identifierSemanticValue.identifierName);
 			break;
 		case(SYMBOL_REDECLARE):
-			printf("ID %s redeclared.", node->semantic_value.identifierSemanticValue.identifierName);
+			printf("ID %s redeclared.\n", node->semantic_value.identifierSemanticValue.identifierName);
 			break;
 		case(TOO_FEW_ARGUMENTS):
-			printf("too few arguments to function %s.", node->semantic_value.identifierSemanticValue.identifierName); //要傳functionStmt下的ID node進去
+			printf("too few arguments to function %s.\n", node->semantic_value.identifierSemanticValue.identifierName); //要傳functionStmt下的ID node進去
 			break;
 		case(TOO_MANY_ARGUMENTS):
-			printf("too many arguments to function %s.", node->semantic_value.identifierSemanticValue.identifierName); //要傳functionStmt下的ID node進去
+			printf("too many arguments to function %s.\n", node->semantic_value.identifierSemanticValue.identifierName); //要傳functionStmt下的ID node進去
 			break;
 		case(RETURN_TYPE_UNMATCH):
-			printf("Incompatible return type.");
+			printf("Incompatible return type.\n");
 			break;
 		case(INCOMPATIBLE_ARRAY_DIMENSION):
-			printf("Incompatible array dimensions.");
+			printf("Incompatible array dimensions.\n");
 			break;
 		case(ARRAY_SUBSCRIPT_NOT_INT):
-			printf("Array subscript is not an integer.");
+			printf("Array subscript is not an integer.\n");
 			break;
 		default:
 			printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
@@ -218,7 +218,7 @@ void processProgramNode(AST_NODE *programNode)
 		switch(programNodeChild->nodeType) {
 			case (DECLARATION_NODE):  //for function declaration node
 				processDeclarationNode(programNodeChild);
-				printf("after handling declaration node\n");
+				//printf("after handling declaration node\n");
 				break;
 			case (VARIABLE_DECL_LIST_NODE):
 				{
@@ -235,6 +235,7 @@ void processProgramNode(AST_NODE *programNode)
 		programNodeChild = programNodeChild->rightSibling;
 	}
 	printf("End processProgramNode\n");
+	printSymbolTable();
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
@@ -267,7 +268,7 @@ void processTypeNode(AST_NODE* idNodeAsType)
 	//負責檢查該Type(其實是一個Id node)是否有宣告過，如果沒有的話噴錯
 	//如果是int, float, void或是有宣告過的話，那就幫他設定DataType
 	char* typeName = idNodeAsType->semantic_value.identifierSemanticValue.identifierName;
-	printf("typeName:%s\n", typeName);
+	//printf("typeName:%s\n", typeName);
 	
 	if (!strcmp(typeName, "int")) {
 		idNodeAsType->dataType = INT_TYPE;
@@ -336,25 +337,23 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 			default:
 				printf("Error: 無法判斷的declartionNode semantic type\n");
 		} 
-		
 		//接下來要插入Entry了
 		//先檢查有沒有同名的重複宣告
 		SymbolTableEntry* entryRetrieved = retrieveSymbol(declareIdNode->semantic_value.identifierSemanticValue.identifierName);
 		char* declaredName = declareIdNode->semantic_value.identifierSemanticValue.identifierName;
 		if (entryRetrieved == NULL) {
 			enterSymbol(declaredName, symbolAttr);
-			printSymbolTable();
 		} else {
-			SymbolTableEntry* sameScopeEntry = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount];
+			//SymbolTableEntry* sameScopeEntry = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount];
+			SymbolTableEntry* sameScopeEntry = symbolTable.scopeDisplay[currentScopeDisplay];
 			while(sameScopeEntry != NULL) {
-				if (sameScopeEntry->name == declaredName) {
-					printErrorMsg(declarationNode, SYMBOL_REDECLARE);
+				if (!strcmp(sameScopeEntry->name, declaredName)) {
+					printErrorMsg(declareIdNode, SYMBOL_REDECLARE);
 					return;
 				}
 				sameScopeEntry = sameScopeEntry->nextInSameLevel;
 			}
 			enterSymbol(declaredName, symbolAttr);
-			printSymbolTable();
 		}
 
 		//處理下一個ID node
@@ -382,13 +381,13 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 void checkWhileStmt(AST_NODE* whileNode)
 {
 	printf("[In checkWhileStmt]\n");
-	printASTNodeInfo(whileNode);
+	//printASTNodeInfo(whileNode);
 	//deal with type WHILE_STMT as a stmt node
 	//call the children of whileNode(processStmtNode and all processExprRelatedNode)
 	AST_NODE* testNode = whileNode->child;
-	printf("II\n");
+	//printf("II\n");
 	AST_NODE* stmtNode = testNode->rightSibling;
-	printf("GG\n");
+	//printf("GG\n");
 	checkAssignOrExpr(testNode);
 	processStmtNode(stmtNode);
 }
@@ -950,7 +949,7 @@ void processBlockNode(AST_NODE* blockNode)
 	//發現底下有decl_list node，就依序call
 	openScope(); 
 	AST_NODE* blockNodeChild = blockNode->child;
-	printASTNodeInfo(blockNodeChild);
+	//printASTNodeInfo(blockNodeChild);
 	while(blockNodeChild != NULL) {
 		//處理該child
 		switch(blockNodeChild->nodeType) {
@@ -998,7 +997,7 @@ void processBlockNode(AST_NODE* blockNode)
 void processStmtNode(AST_NODE* stmtNode)
 {
 	printf("[In processStmtNode]\n");
-	printASTNodeInfo(stmtNode);
+	//printASTNodeInfo(stmtNode);
 	//看是哪種stmt node
 	//while/for/assign_stmt/if_stmt/function_call_stmt/return_stmt
 	if (stmtNode->nodeType == BLOCK_NODE) {
@@ -1159,5 +1158,5 @@ void declareFunction(AST_NODE* declarationNode)
 	enterSymbol(funcName, attribute);
 	processBlockNode(blockNode);
 
-	printSymbolTable();
+	//printSymbolTable();
 }
