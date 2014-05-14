@@ -574,6 +574,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 			switch(actualParameter->nodeType){
 				case(IDENTIFIER_NODE):
 					//檢查是否為array, 若是，則再度確認是否為0維array(scalar)
+					// TODO More test data required
 					if(actualParameter->semantic_value.identifierSemanticValue.kind == ARRAY_ID) {
 						int childNumberOfActualPara = 0;
 						AST_NODE* actualParaChild = actualParameter->child;
@@ -606,8 +607,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 		case(ARRAY_TYPE_DESCRIPTOR):
 			switch(actualParameter->nodeType){
 				case (IDENTIFIER_NODE):
-					if(actualParameter->semantic_value.identifierSemanticValue.kind == ARRAY_ID) {
-						//check table first
+					{	//check table first
 						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
 						if (entry == NULL) {
 							//如果傳進去的id不存在，直接噴錯
@@ -634,8 +634,6 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, INCOMPATIBLE_ARRAY_DIMENSION);
 							}
 						}
-					} else {
-						printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_SCALAR_TO_ARRAY);
 					}
 					break;
 				case (CONST_VALUE_NODE):
