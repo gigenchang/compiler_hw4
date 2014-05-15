@@ -1124,11 +1124,10 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 	while(idNodeChild != NULL) {
 		typeDescriptor->properties.arrayProperties.dimension += 1;
 		typeDescriptor->properties.arrayProperties.sizeInEachDimension[currentDimensionIndex] = 0; //故意填0, 因為可能是expr無法算出
-		i = -1;
-		f = -1.0;
+		
 		//判斷a[expr] 中的expr是否會回傳int
-		getExprOrConstValue(idNodeChild, &i, &f);
-		if (i != 1) {
+		processExprRelatedNode(idNodeChild);
+		if (idNodeChild->dataType != INT_TYPE) {
 			printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
 		}
 
