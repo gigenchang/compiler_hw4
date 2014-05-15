@@ -133,6 +133,34 @@ void printASTNodeInfo(AST_NODE* node) {
 				 break;
 		}
 		printf("\n");
+		printf("DataType:");
+		switch(node->dataType) {
+			case INT_TYPE:
+				 printf("INT_TYPE");
+				 break;
+			case FLOAT_TYPE:
+				 printf("FLOAT_TYPE");
+				 break;
+			case VOID_TYPE:
+				 printf("VOID_TYPE");
+				 break;
+			case INT_PTR_TYPE:
+				 printf("INT_PTR_TYPE");
+				 break;
+			case FLOAT_PTR_TYPE:
+				 printf("FLOAT_PTR_TYPE");
+				 break;
+			case CONST_STRING_TYPE:
+				 printf("CONST_STRING_TYPE");
+				 break;
+			case NONE_TYPE:
+				 printf("NONE_TYPE");
+				 break;
+			case ERROR_TYPE:
+				 printf("ERROR_TYPE");
+				 break;
+		}
+		printf("\n");
 	}
 }
 
@@ -331,7 +359,7 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 				break;
 			case(WITH_INIT_ID):
 				symbolAttr->attr.typeDescriptor->kind = SCALAR_TYPE_DESCRIPTOR;
-				symbolAttr->attr.typeDescriptor->properties.dataType = declarationNode->leftmostSibling->dataType;
+				symbolAttr->attr.typeDescriptor->properties.dataType = declareTypeNode->dataType;
 				processExprRelatedNode(declareIdNode->child);
 				break;
 			default:
@@ -686,21 +714,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 						case BINARY_OP_SUB:
 						case BINARY_OP_MUL:
 						case BINARY_OP_DIV:
-							{
-								AST_NODE* leftChild = exprRelatedNode->child;
-								AST_NODE* rightChild = leftChild->rightSibling;
-								processExprNode(leftChild);
-								processExprNode(rightChild);
-								if (leftChild->dataType == rightChild->dataType) {
-									exprRelatedNode->dataType = leftChild->dataType;
-								} else if (
-									(leftChild->dataType == FLOAT_TYPE && rightChild->dataType == INT_TYPE) ||
-									(leftChild->dataType == INT_TYPE && rightChild->dataType == FLOAT_TYPE) ) {
-										exprRelatedNode->dataType = FLOAT_TYPE;
-								} else {
-									exprRelatedNode->dataType = ERROR_TYPE;
-								}
-							}
+							processExprNode(exprRelatedNode);
 							break;
 						default:
 							printf("Error: exprRelatedNodeChild type error\n");
