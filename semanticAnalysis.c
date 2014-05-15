@@ -816,7 +816,6 @@ void processExprNode(AST_NODE* exprNode)
 {
 	// 這個函式負責[幫每個expr AST node 加上DataType]
 	printf("[In processExprNode]\n");
-	//TODO 處理可能出現rel_expr node的問題
 	switch(exprNode->nodeType){
 		case EXPR_NODE:
 			switch (exprNode->semantic_value.exprSemanticValue.kind) {
@@ -975,36 +974,11 @@ void checkReturnStmt(AST_NODE* returnNode)
 	while(returnNodeParent->semantic_value.declSemanticValue.kind != FUNCTION_DECL){
 		returnNodeParent = returnNodeParent->parent;
 	}
-	char* returnTypeID = returnNodeParent->child->semantic_value.identifierSemanticValue.identifierName;
-	if (returnNodeChild->nodeType == NUL_NODE) {
-		if (strcmp(returnTypeID, "void")) {
-			printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
-		}
-	} else {
-		//確認expression的變數或function call宣告正確性
-		processExprRelatedNode(returnNodeChild);
 
-		//確認return type是否match
-		int i = -1;
-		float f = -1;
-		getExprOrConstValue(returnNodeChild, &i, &f);
-		//如果i, f都沒有變過，代表出現無法判斷的type(使用了沒有宣告過的變數)
-		if (i == -1) {
-			printf("Error: 無法判斷return expression的type");
-		} else {
-			if (i == 0 && f > 0.5) {
-				if (strcmp(returnTypeID, "float")){
-					printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
-				}
-			} else {
-				if (strcmp(returnTypeID, "int")) {
-					printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
-				}
-			}
-		}
-
+	processExprRelatedNode(returnNodeChild);
+	if (returnNodeChild->dataType != returnNodeParent->child->dataType) {
+		printErrorMsg(returnNode, RETURN_TYPE_UNMATCH);
 	}
-
 }
 
 
