@@ -872,7 +872,7 @@ void processExprNode(AST_NODE* exprNode)
 			break;	
 		case CONST_VALUE_NODE:
 			processConstValueNode(exprNode);
-			exprNode->dataType = exprNode->child->dataType;
+			exprNode->dataType = exprNode->dataType;
 			break;
 		case IDENTIFIER_NODE:
 			processVariableRValue(exprNode);
@@ -954,7 +954,7 @@ void processVariableRValue(AST_NODE* idNode)
 void processConstValueNode(AST_NODE* constValueNode)
 {
 	printf("[In processConstValueNode]\n");
-	switch ((*constValueNode->semantic_value.const1).const_type) {
+	switch (constValueNode->semantic_value.const1->const_type) {
 		case(INTEGERC):
 			constValueNode->dataType = INT_TYPE; 
 			break;
