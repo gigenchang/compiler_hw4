@@ -872,11 +872,9 @@ void processExprNode(AST_NODE* exprNode)
 			break;	
 		case CONST_VALUE_NODE:
 			processConstValueNode(exprNode);
-			exprNode->dataType = exprNode->dataType;
 			break;
 		case IDENTIFIER_NODE:
 			processVariableRValue(exprNode);
-			exprNode->dataType = exprNode->dataType;
 			break;
 		case STMT_NODE:
 			if (exprNode->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT) {
