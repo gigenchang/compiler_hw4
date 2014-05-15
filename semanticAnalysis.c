@@ -675,6 +675,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 								AST_NODE* rightChild = leftChild->rightSibling;
 								processExprRelatedNode(leftChild);
 								processExprRelatedNode(rightChild);
+								exprRelatedNode->dataType = INT_TYPE;
 							}
 							break;
 						case BINARY_OP_ADD:
@@ -686,6 +687,15 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 								AST_NODE* rightChild = leftChild->rightSibling;
 								processExprNode(leftChild);
 								processExprNode(rightChild);
+								if (leftChild->dataType == rightChild->dataType) {
+									exprRelatedNode->dataType = leftChild->dataType;
+								} else if (
+									(leftChild->dataType == FLOAT_TYPE && rightChild->dataType == INT_TYPE) ||
+									(leftChild->dataType == INT_TYPE && rightChild->dataType == FLOAT_TYPE) ) {
+										exprRelatedNode->dataType = FLOAT_TYPE;
+								} else {
+									exprRelatedNode->dataType = ERROR_TYPE;
+								}
 							}
 							break;
 						default:
@@ -696,6 +706,7 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 					{
 						AST_NODE* child = exprRelatedNode->child;
 						processExprRelatedNode(child);
+						exprRelatedNode->dataType = child->dataType;
 					}
 					break;
 				default:
@@ -704,14 +715,8 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 			break;
 		case IDENTIFIER_NODE:
 		case CONST_VALUE_NODE:
-			processExprNode(exprRelatedNode);
-			break;
 		case STMT_NODE:
-			if (exprRelatedNode->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT) {
-				checkFunctionCall(exprRelatedNode);
-			} else {
-				printf("Error: 無法判斷的ExprRelatedNode STMT Type\n");
-			}
+			processExprNode(exprRelatedNode);
 			break;
 		default:
 			printf("Error: 無法判斷的ExprRelatedNode Type\n");
@@ -836,6 +841,16 @@ void processExprNode(AST_NODE* exprNode)
 									exprNode->dataType = ERROR_TYPE;
 								}
 							}
+							break;
+						case BINARY_OP_AND:  
+						case BINARY_OP_OR:
+						case BINARY_OP_EQ:
+						case BINARY_OP_GE:  
+						case BINARY_OP_GT:
+						case BINARY_OP_LT:
+						case BINARY_OP_LE:  
+						case BINARY_OP_NE:
+							processExprRelatedNode(exprNode);
 							break;
 						default:
 							printf("Error: 無法判斷的Binary Operation\n");
