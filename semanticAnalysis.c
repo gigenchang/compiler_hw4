@@ -675,7 +675,11 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 								AST_NODE* rightChild = leftChild->rightSibling;
 								processExprRelatedNode(leftChild);
 								processExprRelatedNode(rightChild);
-								exprRelatedNode->dataType = INT_TYPE;
+								if (leftChild->dataType == ERROR_TYPE || rightChild->dataType == ERROR_TYPE) {
+									exprRelatedNode->dataType = ERROR_TYPE;
+								} else {
+									exprRelatedNode->dataType = INT_TYPE;
+								}
 							}
 							break;
 						case BINARY_OP_ADD:
