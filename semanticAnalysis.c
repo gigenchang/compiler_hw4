@@ -532,12 +532,17 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 	AST_NODE* functionNameNode = functionCallNode->child;
 	char* functionName = functionNameNode->semantic_value.identifierSemanticValue.identifierName;
 	if (!strcmp(functionName, "write")) {
+		functionCallNode->dataType = VOID_TYPE;
 		checkWriteFunction(functionCallNode);	
 	} else {
 		SymbolTableEntry* entry = retrieveSymbol(functionName);
 		if ( entry == NULL) {
+			functionCallNode->dataType = ERROR_TYPE;
 			printErrorMsg(functionNameNode, SYMBOL_UNDECLARED);
 		} else {
+			//取得Function return Type的dataType, 附加到該function的AST_Type上面
+			functionCallNode->dataType = entry->attribute->attr.functionSignature->returnType;
+
 			//檢查function參數, 檢查數量是否符合, type是否match, scalar和array的問題
 			Parameter* para = entry->attribute->attr.functionSignature->parameterList;
 			AST_NODE* callParaListNode = functionNameNode->rightSibling;
@@ -804,6 +809,7 @@ void evaluateExprValue(AST_NODE* exprNode)
 
 void processExprNode(AST_NODE* exprNode)
 {
+	// 這個函式負責[幫每個expr AST node 加上DataType]
 	printf("[In processExprNode]\n");
 	//TODO 處理可能出現rel_expr node的問題
 	switch(exprNode->nodeType){
@@ -820,6 +826,15 @@ void processExprNode(AST_NODE* exprNode)
 								AST_NODE* rightChild = leftChild->rightSibling;
 								processExprNode(leftChild);
 								processExprNode(rightChild);
+								if (leftChild->dataType == rightChild->dataType) {
+									exprNode->dataType = leftChild->dataType;
+								} else if (
+									(leftChild->dataType == FLOAT_TYPE && rightChild->dataType == INT_TYPE) ||
+									(leftChild->dataType == INT_TYPE && rightChild->dataType == FLOAT_TYPE) ) {
+										exprNode->dataType = FLOAT_TYPE;
+								} else {
+									exprNode->dataType = ERROR_TYPE;
+								}
 							}
 							break;
 						default:
@@ -830,6 +845,7 @@ void processExprNode(AST_NODE* exprNode)
 					{
 						AST_NODE* child = exprNode->child;
 						processExprNode(child);
+						exprNode->dataType = child->dataType;
 					}
 					break;
 				default:
@@ -838,13 +854,16 @@ void processExprNode(AST_NODE* exprNode)
 			break;	
 		case CONST_VALUE_NODE:
 			processConstValueNode(exprNode);
+			exprNode->dataType = exprNode->child->dataType;
 			break;
 		case IDENTIFIER_NODE:
 			processVariableRValue(exprNode);
+			exprNode->dataType = exprNode->child->dataType;
 			break;
 		case STMT_NODE:
 			if (exprNode->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT) {
 				checkFunctionCall(exprNode);
+				exprNode->dataType = exprNode->child->dataType;
 			} else {
 				printf("Error: 無法判斷的ExprRelatedNode STMT Type\n");
 			}
@@ -871,28 +890,40 @@ void processVariableRValue(AST_NODE* idNode)
 	printf("[In processVariableRValue]\n");
 	SymbolTableEntry* entryRetrieved = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
 	if (entryRetrieved == NULL) {
+		idNode->dataType = ERROR_TYPE; 
 		printErrorMsg(idNode, SYMBOL_UNDECLARED);
 	} else {
 		switch(idNode->semantic_value.identifierSemanticValue.kind){
 			case(ARRAY_ID):
 				{
-					int i;
-					float f;
 					AST_NODE* idNodeChild = idNode->child; 
+					int numOfChildren = 0;
 					while(idNodeChild != NULL){
-						i = -1;
-						f = -1.0;
-						getExprOrConstValue(idNodeChild, &i, &f);
-						if (i != 1) {
-							printErrorMsg(idNode, ARRAY_SUBSCRIPT_NOT_INT);
-						}
-	
+						numOfChildren += 1;
 						idNodeChild = idNodeChild->rightSibling;
 					}
+					int arrayDeclDim = entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
+					if (arrayDeclDim == numOfChildren) {
+						idNode->dataType = entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.elementType;
+					} else if (numOfChildren < arrayDeclDim) {
+						switch(entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.elementType){
+							case INT_TYPE:
+								idNode->dataType = INT_PTR_TYPE;
+								break;
+							case FLOAT_TYPE:
+								idNode->dataType = FLOAT_PTR_TYPE;
+								break;
+							default:
+								printf("Error: processVariableRValue中處理array ID遇到非int非float的多維元素\n");
+						}
+					} else {
+						//使用了比宣告時還多的維度
+						idNode->dataType = ERROR_TYPE;
+					}
+					
 				}
-				//TODO 幫array type的AST_NODE加上dataType, 可能是INT, FLOAT或是PTR(但是PTR不知道要怎麼處理)
+				break;
 			case(NORMAL_ID):
-				//假設會搜尋到id node entry, 所以幫AST tree根據symboltable填上datatype
 				idNode->dataType = entryRetrieved->attribute->attr.typeDescriptor->properties.dataType;
 				break;
 			default:
@@ -907,13 +938,13 @@ void processConstValueNode(AST_NODE* constValueNode)
 	printf("[In processConstValueNode]\n");
 	switch ((*constValueNode->semantic_value.const1).const_type) {
 		case(INTEGERC):
-			//TODO 
+			constValueNode->dataType = INT_TYPE; 
 			break;
 		case(FLOATC):
-			//TODO
+			constValueNode->dataType = FLOAT_TYPE; 
 			break;
 		case(STRINGC):
-			//TODO
+			constValueNode->dataType = CONST_STRING_TYPE; 
 			break;
 		default:
 			printf("Error: constValudNode type error\n");
