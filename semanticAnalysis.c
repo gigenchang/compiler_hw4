@@ -263,7 +263,6 @@ void processProgramNode(AST_NODE *programNode)
 		programNodeChild = programNodeChild->rightSibling;
 	}
 	printf("End processProgramNode\n");
-	printSymbolTable();
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
@@ -608,7 +607,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 				case(IDENTIFIER_NODE):
 					//檢查是否為array, 若是，則再度確認是否為0維array(scalar)
 					// TODO More test data required
-					if(actualParameter->semantic_value.identifierSemanticValue.kind == ARRAY_ID) {
+					{
 						int childNumberOfActualPara = 0;
 						AST_NODE* actualParaChild = actualParameter->child;
 						while(actualParaChild != NULL){
@@ -664,7 +663,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 								//如果傳入的id的維度是0, 代表是scalar
 								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_SCALAR_TO_ARRAY);
 							} else {
-								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, INCOMPATIBLE_ARRAY_DIMENSION);
+								printErrorMsg(actualParaChild, INCOMPATIBLE_ARRAY_DIMENSION);
 							}
 						}
 					}

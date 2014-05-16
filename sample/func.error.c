@@ -4,7 +4,8 @@ int fn1() {
 }
 void fn2() {
 }
-void fn3(int a, int b[3][4]) {
+int fn3(int a, int b[3][4]) {
+	return 1+5;
 }
 int main() {
     int b[4][4];
