@@ -281,7 +281,10 @@ void processDeclarationNode(AST_NODE* declarationNode)
 			declareFunction(declarationNode);
 			break;
 		case(FUNCTION_PARAMETER_DECL):
-			//parameter list (point to type descriptor in symboltable)
+			while(declarationNode != NULL){
+				processDeclarationNode(declarationNode->child);
+				declarationNode = declarationNode->rightSibling;
+			}
 			break;
 		default:
 			printf("Error: 在processDeclarationNode發現傳入未知的DeclNode");
@@ -477,6 +480,7 @@ void checkForStmt(AST_NODE* forNode)
 		default:
 			printf("Error: forNode part3部份出現無預期的節點");
 	}
+	openScope();
 	processBlockNode(blockPart);
 }
 
@@ -518,6 +522,7 @@ void checkIfStmt(AST_NODE* ifNode)
 			checkIfStmt(elseIfNode);
 			break;
 		case BLOCK_NODE:
+			openScope();
 			processBlockNode(elseIfNode);
 			break;
 		default:
@@ -1006,7 +1011,6 @@ void processBlockNode(AST_NODE* blockNode)
 	//stmt_list_node
 	//發現底下有stmt_list node，就依序call processStmtNode()
 	//發現底下有decl_list node，就依序call
-	openScope(); 
 	AST_NODE* blockNodeChild = blockNode->child;
 	//printASTNodeInfo(blockNodeChild);
 	while(blockNodeChild != NULL) {
@@ -1031,6 +1035,7 @@ void processBlockNode(AST_NODE* blockNode)
 								processStmtNode(stmtListNodeChild);
 								break;
 							case BLOCK_NODE:
+								openScope(); 
 								processBlockNode(stmtListNodeChild);
 								break;
 							case NUL_NODE:   
@@ -1060,6 +1065,7 @@ void processStmtNode(AST_NODE* stmtNode)
 	//看是哪種stmt node
 	//while/for/assign_stmt/if_stmt/function_call_stmt/return_stmt
 	if (stmtNode->nodeType == BLOCK_NODE) {
+		openScope();
 		processBlockNode(stmtNode);
 	} else {
 		switch (stmtNode->semantic_value.stmtSemanticValue.kind) {
@@ -1181,13 +1187,18 @@ void declareFunction(AST_NODE* declarationNode)
 
 	attribute->attr.functionSignature->parameterList = NULL;
 	Parameter** param = &(attribute->attr.functionSignature->parameterList);
+	enterSymbol(funcName, attribute);
 
+	openScope(); 
 	while(funcParaDeclNode!=NULL){
 		AST_NODE* paraTypeNode = funcParaDeclNode->child;
 		AST_NODE* paraIdNode = paraTypeNode->rightSibling;
 		
 		//先檢查type是否有宣告過
 		processTypeNode(paraTypeNode);
+		
+		// Enter IDs to symbolTable  
+		declareIdList(funcParaDeclNode, VARIABLE_ATTRIBUTE, 0); //TODO 最後一個參數不知道要傳什麼
 
 		//之後根據參數進行設定.....
 		*param = (Parameter*)malloc(sizeof(Parameter));
@@ -1212,7 +1223,6 @@ void declareFunction(AST_NODE* declarationNode)
 	}
 	
 	//處理block區塊
-	enterSymbol(funcName, attribute);
 	processBlockNode(blockNode);
 
 	//printSymbolTable();

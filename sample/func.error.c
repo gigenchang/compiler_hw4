@@ -5,7 +5,7 @@ int fn1() {
 void fn2() {
 }
 int fn3(int a, int b[3][4]) {
-	return 1+5;
+	a = 1;
 }
 int main() {
     int b[4][4];
