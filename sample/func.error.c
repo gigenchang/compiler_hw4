@@ -8,8 +8,10 @@ int fn3(int a, int b[3][4]) {
 	a = 1;
 }
 int main() {
+	int a;
     int b[4][4];
+	b[3] = a;
     fn1();
     fn2();
-    fn3(2, b);
+    fn3(3, b);
 }

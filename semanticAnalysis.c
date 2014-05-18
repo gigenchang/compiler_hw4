@@ -606,12 +606,16 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 {
 	printf("[In checkParameterPassing]\n");
 	//該函數只負責檢查宣告參數和傳進來的參數是否符合, 不負責檢查下一個參數是否符合
+	
+	//先做expressionProcess, 確保該relop_expr的type
+	//如果有id undeclare, 會在這邊被檢查出來
+	processExprRelatedNode(actualParameter);
+
 	switch (formalParameter->type->kind){
 		case(SCALAR_TYPE_DESCRIPTOR):
 			switch(actualParameter->nodeType){
 				case(IDENTIFIER_NODE):
 					//檢查是否為array, 若是，則再度確認是否為0維array(scalar)
-					// TODO More test data required
 					{
 						int childNumberOfActualPara = 0;
 						AST_NODE* actualParaChild = actualParameter->child;
@@ -622,15 +626,16 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 						
 						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
 						if (entry == NULL) {
-							//如果傳進去的id不存在，直接噴錯
-							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
+							//如果傳進去的id不存在，不用噴錯，因為已經在processExprRelatedNode噴過了
+							//printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
 							return;
-						}
-						int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
-						int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
-						if (dimensionsOfActualPara != 0) {
-								//如果傳入的id的維度不是0, 代表不是scalar
-							printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+						} else { 
+							int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
+							int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
+							if (dimensionsOfActualPara != 0) {
+									//如果傳入的id的維度不是0, 代表不是scalar
+								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+							}
 						}
 					}
 					break;
@@ -647,8 +652,8 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 					{	//check table first
 						SymbolTableEntry* entry = retrieveSymbol(actualParameter->semantic_value.identifierSemanticValue.identifierName);
 						if (entry == NULL) {
-							//如果傳進去的id不存在，直接噴錯
-							printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
+							//如果傳進去的id不存在，不需要噴錯，因為processRelExpr會幫我們先噴
+							//printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
 							return;
 						}
 
@@ -668,7 +673,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 								//如果傳入的id的維度是0, 代表是scalar
 								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_SCALAR_TO_ARRAY);
 							} else {
-								printErrorMsg(actualParaChild, INCOMPATIBLE_ARRAY_DIMENSION);
+								printErrorMsg(actualParameter, INCOMPATIBLE_ARRAY_DIMENSION);
 							}
 						}
 					}
@@ -911,12 +916,14 @@ void processExprNode(AST_NODE* exprNode)
 void processVariableLValue(AST_NODE* idNode)
 {
 	printf("[In processVariableLValue]\n");
+	processVariableRValue(idNode);
+	/*
 	SymbolTableEntry* entryRetrieved = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
 	if (entryRetrieved == NULL) {
 		printErrorMsg(idNode, SYMBOL_UNDECLARED);
 	} else {
 		//沒有做check L value 和 R value 的 type	
-	}
+	}*/
 }
 
 void processVariableRValue(AST_NODE* idNode)
@@ -939,22 +946,28 @@ void processVariableRValue(AST_NODE* idNode)
 					int arrayDeclDim = entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
 					if (arrayDeclDim == numOfChildren) {
 						idNode->dataType = entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.elementType;
-					} else if (numOfChildren < arrayDeclDim) {
-						switch(entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.elementType){
-							case INT_TYPE:
-								idNode->dataType = INT_PTR_TYPE;
-								break;
-							case FLOAT_TYPE:
-								idNode->dataType = FLOAT_PTR_TYPE;
-								break;
-							default:
-								printf("Error: processVariableRValue中處理array ID遇到非int非float的多維元素\n");
-						}
 					} else {
-						//使用了比宣告時還多的維度
-						idNode->dataType = ERROR_TYPE;
+						//Array refernce incompatible
+						//檢查是否出現在function call, 如果是的話就沒問題, 不是的話就要噴Incompatible array dimensions
+						if (idNode->parent->parent->nodeType == STMT_NODE && 
+							idNode->parent->parent->semantic_value.stmtSemanticValue.kind == FUNCTION_CALL_STMT) {
+							//發現是function call中的參數
+							switch(entryRetrieved->attribute->attr.typeDescriptor->properties.arrayProperties.elementType){
+								case INT_TYPE:
+									idNode->dataType = INT_PTR_TYPE;
+									break;
+								case FLOAT_TYPE:
+									idNode->dataType = FLOAT_PTR_TYPE;
+									break;
+								default:
+									printf("Error: processVariableRValue中處理array ID遇到非int非float的多維元素\n");
+							}
+						} else {
+							//使用了比宣告時還多的維度
+							idNode->dataType = ERROR_TYPE;
+							printErrorMsg(idNode, INCOMPATIBLE_ARRAY_DIMENSION);
+						}
 					}
-					
 				}
 				break;
 			case(NORMAL_ID):
