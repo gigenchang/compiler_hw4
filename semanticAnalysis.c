@@ -221,14 +221,12 @@ void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
 
 void semanticAnalysis(AST_NODE *root)
 {
-	printf("[In semanticAnalysis]\n");
     processProgramNode(root);
 }
 
 
 DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 {
-	printf("[In getBiggerType]\n");
     if(dataType1 == FLOAT_TYPE || dataType2 == FLOAT_TYPE) {
         return FLOAT_TYPE;
     } else {
@@ -239,7 +237,6 @@ DATA_TYPE getBiggerType(DATA_TYPE dataType1, DATA_TYPE dataType2)
 
 void processProgramNode(AST_NODE *programNode)
 {
-	printf("[In processProgramNode]\n");
 	AST_NODE* programNodeChild = programNode->child;
 
 	while(programNodeChild != NULL) {
@@ -262,12 +259,10 @@ void processProgramNode(AST_NODE *programNode)
 		}
 		programNodeChild = programNodeChild->rightSibling;
 	}
-	printf("End processProgramNode\n");
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)
 {
-	printf("[In processDeclarationNode]\n");
 	//處理四種不同的type declration
 	//VARIABLE_DECL  TYPE_DECL   FUNCTION_DECL  FUNCTION_PARAMETER_DECL
 	switch (declarationNode->semantic_value.declSemanticValue.kind) {
@@ -294,7 +289,6 @@ void processDeclarationNode(AST_NODE* declarationNode)
 
 void processTypeNode(AST_NODE* idNodeAsType)
 {
-	printf("[In processTypeNode]\n");
 	//負責檢查該Type(其實是一個Id node)是否有宣告過，如果沒有的話噴錯
 	//如果是int, float, void或是有宣告過的話，那就幫他設定DataType
 	char* typeName = idNodeAsType->semantic_value.identifierSemanticValue.identifierName;
@@ -319,7 +313,6 @@ void processTypeNode(AST_NODE* idNodeAsType)
 
 void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTypeAttribute, int ignoreArrayFirstDimSize)
 {
-	printf("[In declareIdlList]\n");
 	//傳入的node大概會長這樣子
 	//decl_node->int
 	//         ->id (可能是NORMAL_ID)
@@ -389,11 +382,11 @@ void declareIdList(AST_NODE* declarationNode, SymbolAttributeKind isVariableOrTy
 		//處理下一個ID node
 		declareIdNode = declareIdNode->rightSibling;
 	}
+	//printSymbolTable();
 }
 
 void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 {
-	printf("[In checkAssignOrExpr]\n");
 	//if assign ...call blabalbal(call checkAssignmentStmt)
 	//if rela ... cla blablabla(call processExprRelatedNode)
 	//call processExprNode
@@ -410,7 +403,6 @@ void checkAssignOrExpr(AST_NODE* assignOrExprRelatedNode)
 
 void checkWhileStmt(AST_NODE* whileNode)
 {
-	printf("[In checkWhileStmt]\n");
 	//printASTNodeInfo(whileNode);
 	//deal with type WHILE_STMT as a stmt node
 	//call the children of whileNode(processStmtNode and all processExprRelatedNode)
@@ -425,7 +417,6 @@ void checkWhileStmt(AST_NODE* whileNode)
 
 void checkForStmt(AST_NODE* forNode)
 {
-	printf("[In checkForStmt]\n");
 	//deal with type FOR_STMT as a stmt node
 	//call the children of forNode
 	//including some checkAssignmentStmt 
@@ -487,7 +478,6 @@ void checkForStmt(AST_NODE* forNode)
 
 void checkAssignmentStmt(AST_NODE* assignmentNode)
 {
-	printf("[In checkAssignmentStmt]\n");
 	//insert table entry for ASSIGN_STMT node
 	//該function只處理 a=3 之類的stmt, 不處理int a=3
 	AST_NODE* leftIDNode = assignmentNode->child;
@@ -505,7 +495,6 @@ void checkAssignmentStmt(AST_NODE* assignmentNode)
 
 void checkIfStmt(AST_NODE* ifNode)
 {
-	printf("[In checkIfStmt]\n");
 	//deal with type IF_STMT as a stmt node
 	//call the children same as while statement
 	AST_NODE* testNode = ifNode->child;
@@ -533,7 +522,6 @@ void checkIfStmt(AST_NODE* ifNode)
 
 void checkWriteFunction(AST_NODE* functionCallNode)
 {
-	printf("[In checkWriteFunction]\n");
 	AST_NODE* functionNameNode = functionCallNode->child;
 	AST_NODE* callParaListNode = functionNameNode->rightSibling;
 	AST_NODE* paraNode;
@@ -557,7 +545,6 @@ void checkWriteFunction(AST_NODE* functionCallNode)
 
 void checkFunctionCall(AST_NODE* functionCallNode)
 {
-	printf("[In checkFunctionCall]\n");
 	//function_call_node -> function_name(id_node)
 	//              -> NUL_NODE or NONEMPTY_RELOP_EXPR_LIST_NODE
 	//檢查function name是否存在於symbol_table
@@ -604,7 +591,6 @@ void checkFunctionCall(AST_NODE* functionCallNode)
 
 void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter)
 {
-	printf("[In checkParameterPassing]\n");
 	//該函數只負責檢查宣告參數和傳進來的參數是否符合, 不負責檢查下一個參數是否符合
 	
 	//先做expressionProcess, 確保該relop_expr的type
@@ -642,7 +628,7 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 				case (CONST_VALUE_NODE):
 				case (EXPR_NODE):
 				default:
-					printf("預期參數為scalar, 收到參數包含了expression或const, 視為scalar\n");
+					break;
 			}
 			//actualParameter可能會是一個expression,或是array之類的....所以還不會寫
 			break;
@@ -680,7 +666,6 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 					break;
 				case (CONST_VALUE_NODE):
 				case (EXPR_NODE):
-					printf("預期參數為Array, 收到參數包含了expression或const, 不處理\n");
 					break;
 			}
 			break;
@@ -692,7 +677,6 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 
 void processExprRelatedNode(AST_NODE* exprRelatedNode)
 {
-	printf("[In processExprRelatedNode]\n");
 	//收到的node其實不一定是expr, 有可能是expr, const, 或id node
 	switch (exprRelatedNode->nodeType) {
 		case EXPR_NODE:
@@ -752,7 +736,6 @@ void processExprRelatedNode(AST_NODE* exprRelatedNode)
 
 void getExprOrConstValue(AST_NODE* exprOrConstNode, int* iValue, float* fValue)
 {
-	printf("[In getExprOrConstValue]\n");
 	switch (exprOrConstNode->nodeType) {
 		case(EXPR_NODE):
 			switch (exprOrConstNode->semantic_value.exprSemanticValue.kind) {
@@ -842,7 +825,6 @@ void evaluateExprValue(AST_NODE* exprNode)
 void processExprNode(AST_NODE* exprNode)
 {
 	// 這個函式負責[幫每個expr AST node 加上DataType]
-	printf("[In processExprNode]\n");
 	switch(exprNode->nodeType){
 		case EXPR_NODE:
 			switch (exprNode->semantic_value.exprSemanticValue.kind) {
@@ -915,7 +897,6 @@ void processExprNode(AST_NODE* exprNode)
 
 void processVariableLValue(AST_NODE* idNode)
 {
-	printf("[In processVariableLValue]\n");
 	processVariableRValue(idNode);
 	/*
 	SymbolTableEntry* entryRetrieved = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
@@ -928,7 +909,6 @@ void processVariableLValue(AST_NODE* idNode)
 
 void processVariableRValue(AST_NODE* idNode)
 {
-	printf("[In processVariableRValue]\n");
 	SymbolTableEntry* entryRetrieved = retrieveSymbol(idNode->semantic_value.identifierSemanticValue.identifierName);
 	if (entryRetrieved == NULL) {
 		idNode->dataType = ERROR_TYPE; 
@@ -982,7 +962,6 @@ void processVariableRValue(AST_NODE* idNode)
 
 void processConstValueNode(AST_NODE* constValueNode)
 {
-	printf("[In processConstValueNode]\n");
 	switch (constValueNode->semantic_value.const1->const_type) {
 		case(INTEGERC):
 			constValueNode->dataType = INT_TYPE; 
@@ -1001,7 +980,6 @@ void processConstValueNode(AST_NODE* constValueNode)
 
 void checkReturnStmt(AST_NODE* returnNode)
 {
-	printf("[In checkReturnStmt]\n");
 	AST_NODE* returnNodeChild = returnNode->child;
 	AST_NODE* returnNodeParent = returnNode->parent;
 	while(returnNodeParent->semantic_value.declSemanticValue.kind != FUNCTION_DECL){
@@ -1017,7 +995,6 @@ void checkReturnStmt(AST_NODE* returnNode)
 
 void processBlockNode(AST_NODE* blockNode)
 {
-	printf("[In processBlockNode]\n");
 	
 	//處理
 	//可能有decl_list node 和 stmt_list node
@@ -1073,7 +1050,6 @@ void processBlockNode(AST_NODE* blockNode)
 
 void processStmtNode(AST_NODE* stmtNode)
 {
-	printf("[In processStmtNode]\n");
 	//printASTNodeInfo(stmtNode);
 	//看是哪種stmt node
 	//while/for/assign_stmt/if_stmt/function_call_stmt/return_stmt
@@ -1110,7 +1086,6 @@ void processStmtNode(AST_NODE* stmtNode)
 
 void processGeneralNode(AST_NODE *node)
 {
-	printf("[In processGeneralNode]\n");
 	switch (node->dataType) {
 		case INT_TYPE:
 			//TODO
@@ -1143,7 +1118,6 @@ void processGeneralNode(AST_NODE *node)
 
 void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ignoreFirstDimSize)
 {
-	printf("[In processDeclDimList]\n");
 	//該function負責專心專注於
 	typeDescriptor->kind = ARRAY_TYPE_DESCRIPTOR;
 	AST_NODE* idNodeChild = idNode->child;
@@ -1170,7 +1144,6 @@ void processDeclDimList(AST_NODE* idNode, TypeDescriptor* typeDescriptor, int ig
 
 void declareFunction(AST_NODE* declarationNode)
 {
-	printf("[In declareFunction]\n");
 	AST_NODE* returnTypeNode = declarationNode->child;
 	AST_NODE* funcNameNode = returnTypeNode->rightSibling;
 	AST_NODE* paraListNode = funcNameNode->rightSibling;
