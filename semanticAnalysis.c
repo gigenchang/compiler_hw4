@@ -212,6 +212,9 @@ void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
 		case(ARRAY_SUBSCRIPT_NOT_INT):
 			printf("Array subscript is not an integer.\n");
 			break;
+		case(PARAMETER_TYPE_UNMATCH):
+			printf("Parameter type unmatch\n");
+			break;
 		default:
 			printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
 			break;
@@ -499,23 +502,25 @@ void checkIfStmt(AST_NODE* ifNode)
 	//call the children same as while statement
 	AST_NODE* testNode = ifNode->child;
 	AST_NODE* stmtNode = testNode->rightSibling;
-	AST_NODE* elseIfNode = stmtNode->rightSibling;
-	checkAssignOrExpr(testNode);
-	processStmtNode(stmtNode);
-	switch(elseIfNode->nodeType) {
-		case NUL_NODE:
-			//沒有else if
-			break;
-		case STMT_NODE:
-			//else if stm
-			checkIfStmt(elseIfNode);
-			break;
-		case BLOCK_NODE:
-			openScope();
-			processBlockNode(elseIfNode);
-			break;
-		default:
-			printf("Error:無法identify的else if Node type\n");
+	if (stmtNode != NULL) {
+		AST_NODE* elseIfNode = stmtNode->rightSibling;
+		checkAssignOrExpr(testNode);
+		processStmtNode(stmtNode);
+		switch(elseIfNode->nodeType) {
+			case NUL_NODE:
+				//沒有else if
+				break;
+			case STMT_NODE:
+				//else if stm
+				checkIfStmt(elseIfNode);
+				break;
+			case BLOCK_NODE:
+				openScope();
+				processBlockNode(elseIfNode);
+				break;
+			default:
+				printf("Error:無法identify的else if Node type\n");
+		}
 	}
 	
 }
@@ -616,11 +621,20 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 							//printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
 							return;
 						} else { 
-							int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
-							int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
-							if (dimensionsOfActualPara != 0) {
-									//如果傳入的id的維度不是0, 代表不是scalar
-								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+							switch (entry->attribute->attr.typeDescriptor->kind){
+								case ARRAY_TYPE_DESCRIPTOR:
+								{
+									int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
+									int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
+									if (dimensionsOfActualPara != 0) {
+											//如果傳入的id的維度不是0, 代表不是scalar
+										printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+									}
+								}
+								break;
+								case SCALAR_TYPE_DESCRIPTOR:
+									//預期參數和實際參數都是scalar, 不噴錯
+								break;
 							}
 						}
 					}
