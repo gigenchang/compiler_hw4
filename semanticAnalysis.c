@@ -508,9 +508,13 @@ void checkIfStmt(AST_NODE* ifNode)
 	printf("[In checkIfStmt]\n");
 	//deal with type IF_STMT as a stmt node
 	//call the children same as while statement
+	printf("jj\n");
 	AST_NODE* testNode = ifNode->child;
+	printf("1jj\n");
 	AST_NODE* stmtNode = testNode->rightSibling;
+	printf("2jj\n");
 	AST_NODE* elseIfNode = stmtNode->rightSibling;
+	printf("3jj\n");
 	checkAssignOrExpr(testNode);
 	processStmtNode(stmtNode);
 	switch(elseIfNode->nodeType) {
@@ -630,11 +634,20 @@ void checkParameterPassing(Parameter* formalParameter, AST_NODE* actualParameter
 							//printErrorMsg(actualParameter, SYMBOL_UNDECLARED);
 							return;
 						} else { 
-							int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
-							int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
-							if (dimensionsOfActualPara != 0) {
-									//如果傳入的id的維度不是0, 代表不是scalar
-								printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+							switch (entry->attribute->attr.typeDescriptor->kind){
+								case ARRAY_TYPE_DESCRIPTOR:
+								{
+									int actualParameterOriginalDimensions = entry->attribute->attr.typeDescriptor->properties.arrayProperties.dimension;
+									int dimensionsOfActualPara = actualParameterOriginalDimensions - childNumberOfActualPara;
+									if (dimensionsOfActualPara != 0) {
+											//如果傳入的id的維度不是0, 代表不是scalar
+										printErrorMsgSpecial(actualParameter, formalParameter->parameterName, PASS_ARRAY_TO_SCALAR);
+									}
+								}
+								break;
+								case SCALAR_TYPE_DESCRIPTOR:
+									//預期參數和實際參數都是scalar, 不噴錯
+								break;
 							}
 						}
 					}
