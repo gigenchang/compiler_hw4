@@ -212,6 +212,9 @@ void printErrorMsg(AST_NODE* node, ErrorMsgKind errorMsgKind)
 		case(ARRAY_SUBSCRIPT_NOT_INT):
 			printf("Array subscript is not an integer.\n");
 			break;
+		case(PARAMETER_TYPE_UNMATCH):
+			printf("Parameter type unmatch\n");
+			break;
 		default:
 			printf("Unhandled case in void printErrorMsg(AST_NODE* node, ERROR_MSG_KIND* errorMsgKind)\n");
 			break;
@@ -508,29 +511,27 @@ void checkIfStmt(AST_NODE* ifNode)
 	printf("[In checkIfStmt]\n");
 	//deal with type IF_STMT as a stmt node
 	//call the children same as while statement
-	printf("jj\n");
 	AST_NODE* testNode = ifNode->child;
-	printf("1jj\n");
 	AST_NODE* stmtNode = testNode->rightSibling;
-	printf("2jj\n");
-	AST_NODE* elseIfNode = stmtNode->rightSibling;
-	printf("3jj\n");
-	checkAssignOrExpr(testNode);
-	processStmtNode(stmtNode);
-	switch(elseIfNode->nodeType) {
-		case NUL_NODE:
-			//沒有else if
-			break;
-		case STMT_NODE:
-			//else if stm
-			checkIfStmt(elseIfNode);
-			break;
-		case BLOCK_NODE:
-			openScope();
-			processBlockNode(elseIfNode);
-			break;
-		default:
-			printf("Error:無法identify的else if Node type\n");
+	if (stmtNode != NULL) {
+		AST_NODE* elseIfNode = stmtNode->rightSibling;
+		checkAssignOrExpr(testNode);
+		processStmtNode(stmtNode);
+		switch(elseIfNode->nodeType) {
+			case NUL_NODE:
+				//沒有else if
+				break;
+			case STMT_NODE:
+				//else if stm
+				checkIfStmt(elseIfNode);
+				break;
+			case BLOCK_NODE:
+				openScope();
+				processBlockNode(elseIfNode);
+				break;
+			default:
+				printf("Error:無法identify的else if Node type\n");
+		}
 	}
 	
 }
