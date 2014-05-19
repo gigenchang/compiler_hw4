@@ -102,8 +102,8 @@ SymbolTableEntry* enterSymbol(char* symbolName, SymbolAttribute* attribute)
 		temp->prevInHashChain = retr->prevInHashChain;
 		retr->nextInHashChain->prevInHashChain = temp;
 		retr->prevInHashChain->nextInHashChain = temp;*/
-		temp->nextInHashChain = retr;
-		temp->prevInHashChain = NULL; //因為是插到hash chain最前面, 所以prev是null
+		temp->nextInHashChain = symbolTable.hashTable[HASH(symbolName)];
+		symbolTable.hashTable[HASH(symbolName)] = temp; //因為是插到hash chain最前面, 所以prev是null
 		retr->prevInHashChain = temp; 
 		temp->sameNameInOuterLevel = retr;
 	}
@@ -125,9 +125,10 @@ void removeSymbol(char* symbolName)
 		temp->nextInHashChain->prevInHashChain = tempsame;
 		temp->prevInHashChain->nextInHashChain = tempsame;
 	}
-	else
+	else{
 		temp->nextInHashChain->prevInHashChain = temp->prevInHashChain;
 		temp->prevInHashChain->nextInHashChain = temp->nextInHashChain;
+	}
 }
 
 int declaredLocally(char* symbolName)

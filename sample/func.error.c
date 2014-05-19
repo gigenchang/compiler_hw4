@@ -9,7 +9,7 @@ int fn3(int a, int b[3][4]) {
 }
 int main() {
 	int a;
-    int b[4][4];
+    int b[4][3];
 	b[3] = a;
     fn1();
     fn2();
