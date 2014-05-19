@@ -8,7 +8,6 @@ int fn3(int a, int b[3][4]) {
 	a = 1;
 }
 int main() {
-	int a;
     int b[4][3];
 	b[3] = a;
     fn1();

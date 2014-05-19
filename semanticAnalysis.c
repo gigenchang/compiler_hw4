@@ -263,7 +263,6 @@ void processProgramNode(AST_NODE *programNode)
 		programNodeChild = programNodeChild->rightSibling;
 	}
 	printf("End processProgramNode\n");
-	printSymbolTable();
 }
 
 void processDeclarationNode(AST_NODE* declarationNode)

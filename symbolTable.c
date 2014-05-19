@@ -122,12 +122,21 @@ void removeSymbol(char* symbolName)
 	if(tempsame != NULL){
 		tempsame->nextInHashChain = temp->nextInHashChain;
 		tempsame->prevInHashChain = temp->prevInHashChain;
-		temp->nextInHashChain->prevInHashChain = tempsame;
-		temp->prevInHashChain->nextInHashChain = tempsame;
+		if(temp->nextInHashChain != NULL)	
+			temp->nextInHashChain->prevInHashChain = tempsame;
+		if(temp->prevInHashChain != NULL)
+			temp->prevInHashChain->nextInHashChain = tempsame;
+		else
+			symbolTable.hashTable[HASH(symbolName)] = tempsame;
+			
 	}
 	else{
-		temp->nextInHashChain->prevInHashChain = temp->prevInHashChain;
-		temp->prevInHashChain->nextInHashChain = temp->nextInHashChain;
+		if(temp->nextInHashChain != NULL)
+			temp->nextInHashChain->prevInHashChain = temp->prevInHashChain;
+		if(temp->prevInHashChain != NULL)
+			temp->prevInHashChain->nextInHashChain = temp->nextInHashChain;
+		else
+			symbolTable.hashTable[HASH(symbolName)] = temp->nextInHashChain;
 	}
 }
 
@@ -147,6 +156,11 @@ void openScope()
 void closeScope()
 {
 	symbolTableEnd();
+	SymbolTableEntry* STEptr = symbolTable.scopeDisplay[symbolTable.scopeDisplayElementCount - 1]->nextInSameLevel; 
+	while(STEptr != NULL){
+		removeSymbol(STEptr->name);
+		STEptr = STEptr->nextInSameLevel;
+	}		
 	symbolTable.currentLevel--;
 	while(currentScopeDisplay > 0 && symbolTable.scopeDisplay[currentScopeDisplay]->nestingLevel > symbolTable.currentLevel)
 		currentScopeDisplay--;
